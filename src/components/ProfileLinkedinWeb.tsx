@@ -64,7 +64,7 @@ const ProfileLinkedinWeb: React.FC<ProfileLinkedinWebProps> = ({
   onContactEdit,
 }) => {
   // عرض الفيديو الشخصي (videoUrl)
-  const hasVideo = !!user.videoUrl;
+  const hasVideo = !!user.videoURL;
   // فيديوهات مفضلة
   const favoriteVideos = Array.isArray(user.savedVideos) ? user.savedVideos : [];
 
@@ -98,7 +98,7 @@ const ProfileLinkedinWeb: React.FC<ProfileLinkedinWebProps> = ({
         {/* عرض الفيديو الشخصي */}
         {hasVideo && (
           <div className="mb-8 flex justify-center">
-            <video src={user.videoUrl} controls className="rounded-xl shadow-lg max-w-[400px] w-full" poster={user.thumbnailUrl} />
+            <video src={user.videoURL} controls className="rounded-xl shadow-lg max-w-[400px] w-full" poster={user.thumbnailUrl} />
           </div>
         )}
         {/* قسم الفيديوهات المفضلة */}
