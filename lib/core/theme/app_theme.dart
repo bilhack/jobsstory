@@ -6,6 +6,7 @@ abstract final class AppColors {
   static const Color secondary = Color(0xFFFF2D78); // hot pink
   static const Color accent = Color(0xFF23B5FF); // electric blue
   static const Color amber = Color(0xFFFFB300);
+  static const Color danger = Color(0xFFFF5252);
   static const Color background = Color(0xFF0F0F1A);
   static const Color surface = Color(0xFF1A1A2E);
   static const Color surfaceLight = Color(0xFF232338);

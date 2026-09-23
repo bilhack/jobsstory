@@ -6,8 +6,10 @@ import 'package:provider/provider.dart';
 import 'core/config/app_strings.dart';
 import 'core/firebase/bootstrap.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/providers/story_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/auth_service.dart';
+import 'core/services/story_service.dart';
 import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
@@ -17,15 +19,23 @@ Future<void> main() async {
 
 /// Root widget — Arabic-first, full RTL support, vibrant dark theme.
 class JobsStoryApp extends StatelessWidget {
-  const JobsStoryApp({super.key, this.authService});
+  const JobsStoryApp({super.key, this.authService, this.storyService});
 
-  /// Injectable for tests; production uses the real Firebase service.
+  /// Injectable for tests; production uses the real Firebase services.
   final AuthService? authService;
+  final StoryService? storyService;
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AuthProvider(service: authService ?? FirebaseAuthService()),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(service: authService ?? FirebaseAuthService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => StoryProvider(service: storyService ?? FirebaseStoryService()),
+        ),
+      ],
       child: const _AppShell(),
     );
   }

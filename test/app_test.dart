@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jobsstory/core/media/media_picker.dart';
+import 'package:jobsstory/core/models/story.dart';
 import 'package:jobsstory/main.dart';
+import 'package:provider/provider.dart';
 
 import 'fakes.dart';
 
@@ -96,5 +99,87 @@ void main() {
 
     // Guests are guarded to the login screen after signing out.
     expect(find.text('مرحباً بعودتك'), findsOneWidget);
+  });
+
+  testWidgets('Seeker home shows story actions', (tester) async {
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInSeeker),
+      storyService: FakeStoryService(),
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/home');
+
+    expect(find.text('إنشاء قصة'), findsOneWidget);
+    expect(find.text('قصصي'), findsOneWidget);
+  });
+
+  testWidgets('Recruiters are guarded away from the studio', (tester) async {
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInRecruiter),
+      storyService: FakeStoryService(),
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/studio');
+
+    // Back on home (recruiter has no studio cards).
+    expect(find.text('إنشاء قصة'), findsNothing);
+    expect(find.textContaining('أهلاً'), findsOneWidget);
+  });
+
+  testWidgets('Full studio flow: gallery → publish → appears in my stories', (tester) async {
+    final storyService = FakeStoryService();
+    await tester.pumpWidget(
+      Provider<MediaPicker>.value(
+        value: FakeMediaPicker(),
+        child: JobsStoryApp(
+          authService: FakeAuthService(FakeStatus.signedInSeeker),
+          storyService: storyService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await go(tester, '/studio');
+
+    // No camera in tests: the gallery CTA is shown directly.
+    await tester.tap(find.text('اختر من المعرض'));
+    await tester.pumpAndSettle();
+
+    // Caption + publish.
+    await tester.enterText(find.byType(TextField), 'قصتي الأولى');
+    await tester.ensureVisible(find.text('نشر القصة'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('نشر القصة'));
+    await tester.pumpAndSettle();
+
+    expect(storyService.publishCount, 1);
+    // Landed on "my stories" which lists the freshly published caption.
+    expect(find.text('قصتي', skipOffstage: false), findsNothing);
+    expect(find.text('قصتي الأولى'), findsOneWidget);
+    expect(find.text('قيد المراجعة'), findsOneWidget);
+  });
+
+  testWidgets('My stories shows seeded list and delete empties it', (tester) async {
+    final storyService = FakeStoryService();
+    storyService.seed([
+      const Story(id: 'a', ownerUid: 'u1', caption: 'قصتي المنشورة', status: StoryStatus.approved, thumbnailUrl: ''),
+    ]);
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInSeeker),
+      storyService: storyService,
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/my-stories');
+
+    expect(find.text('قصتي المنشورة'), findsOneWidget);
+    expect(find.text('منشورة'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('لا توجد قصص بعد'), findsOneWidget);
   });
 }

@@ -4,6 +4,8 @@ import '../../features/home/home_screen.dart';
 import '../../features/login/login_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/register/register_screen.dart';
+import '../../features/story/my_stories_screen.dart';
+import '../../features/story/studio_screen.dart';
 import '../../features/welcome/welcome_screen.dart';
 import '../models/app_user.dart';
 import '../providers/auth_provider.dart';
@@ -30,6 +32,8 @@ class AppRouter {
           },
         ),
         GoRoute(path: HomeScreen.route, name: 'home', builder: (_, __) => const HomeScreen()),
+        GoRoute(path: StoryStudioScreen.route, name: 'studio', builder: (_, __) => const StoryStudioScreen()),
+        GoRoute(path: MyStoriesScreen.route, name: 'my-stories', builder: (_, __) => const MyStoriesScreen()),
       ],
     );
   }
@@ -39,6 +43,11 @@ class AppRouter {
     OnboardingScreen.route,
     LoginScreen.route,
     RegisterScreen.route,
+  };
+
+  static const _seekersOnly = {
+    StoryStudioScreen.route,
+    MyStoriesScreen.route,
   };
 
   static String? _redirect(AuthProvider auth, String location) {
@@ -53,7 +62,12 @@ class AppRouter {
       return location == onboarding || location == WelcomeScreen.route ? null : onboarding;
     }
 
-    // Fully onboarded: only home is reachable.
-    return location == HomeScreen.route ? null : HomeScreen.route;
+    // Recruiters can't create/store stories (their feed arrives in Phase 3).
+    if (_seekersOnly.contains(location) && auth.role != UserRole.seeker) {
+      return HomeScreen.route;
+    }
+
+    // Onboarded users land on home instead of the marketing welcome page.
+    return location == WelcomeScreen.route ? HomeScreen.route : null;
   }
 }

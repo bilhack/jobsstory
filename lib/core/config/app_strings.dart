@@ -63,4 +63,36 @@ class AppStrings {
   static const String weakPasswordError = 'Password must be at least 6 characters.';
   static const String fillAllFields = 'Please fill all fields.';
   static const String invalidEmailError = 'Please enter a valid email address.';
+
+  // Story studio
+  static const String studioTitle = 'Story Studio';
+  static const String studioTitleAr = 'استوديو القصة';
+  static const String studioHint = 'Record up to 60 seconds of you telling your story.';
+  static const String studioHintAr = 'سجّل حتى 60 ثانية من فيديو تحكي فيه قصتك.';
+  static const String captionLabel = 'Caption (optional)';
+  static const String captionLabelAr = 'وصف القصة (اختياري)';
+  static const String publishStory = 'Publish story';
+  static const String publishStoryAr = 'نشر القصة';
+  static const String pickFromGallery = 'Pick from gallery';
+  static const String pickFromGalleryAr = 'اختر من المعرض';
+  static const String storyTooLong = 'Story must be up to 60 seconds.';
+  static const String storyTooLongAr = 'القصة يجب ألا تتجاوز 60 ثانية.';
+  static const String publishedSuccess = 'Your story was published';
+  static const String publishedSuccessAr = 'تم نشر قصتك بنجاح';
+
+  // My stories
+  static const String myStories = 'My stories';
+  static const String myStoriesAr = 'قصصي';
+  static const String noStories = 'No stories yet';
+  static const String noStoriesAr = 'لا توجد قصص بعد';
+  static const String noStoriesHint = 'Tell your story in 60 seconds — employers are watching.';
+  static const String noStoriesHintAr = 'احكِ قصتك في 60 ثانية — أصحاب العمل ينتظرون.';
+  static const String createStoryCta = 'Create story';
+  static const String createStoryCtaAr = 'إنشاء قصة';
+  static const String deleteStory = 'Delete story';
+  static const String deleteStoryAr = 'حذف القصة';
+  static const String addingVideoNote = 'ملاحظة: تتوفر الكاميرا على الأجهزة الفعلية فقط.';
+
+  static String pickFailed(bool isAr) =>
+      isAr ? 'تعذّر اختيار الملف، حاول مجدداً.' : 'Could not open the picker.';
 }

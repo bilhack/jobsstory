@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/app_strings.dart';
 import '../../core/models/app_user.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../story/my_stories_screen.dart';
+import '../story/studio_screen.dart';
 
-/// Post-auth shell. Placeholder for the real experiences:
-/// seeker → my story / jobs | recruiter → feed / jobs / candidates.
+/// Post-auth shell. Seekers create/manage their story; recruiters get a
+/// placeholder for the candidate feed arriving in Phase 3.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -18,6 +21,7 @@ class HomeScreen extends StatelessWidget {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final auth = context.watch<AuthProvider>();
     final profile = auth.snapshot.profile;
+    final isSeeker = auth.role == UserRole.seeker;
     final roleLabel = switch (auth.role) {
       UserRole.seeker => (isAr ? AppStrings.roleSeekerAr : AppStrings.roleSeeker),
       UserRole.recruiter => (isAr ? AppStrings.roleRecruiterAr : AppStrings.roleRecruiter),
@@ -86,8 +90,72 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              const _FeaturePlaceholder(),
+              if (isSeeker) ...[
+                _ActionCard(
+                  icon: Icons.videocam_rounded,
+                  title: (isAr ? AppStrings.createStoryCtaAr : AppStrings.createStoryCta),
+                  subtitle: (isAr ? AppStrings.studioHintAr : AppStrings.studioHint),
+                  onTap: () => context.go(StoryStudioScreen.route),
+                ),
+                const SizedBox(height: 12),
+                _ActionCard(
+                  icon: Icons.video_library_rounded,
+                  title: (isAr ? AppStrings.myStoriesAr : AppStrings.myStories),
+                  subtitle: (isAr ? 'اعرض قصصك وراجع حالاتها' : 'See your stories and their status'),
+                  onTap: () => context.go(MyStoriesScreen.route),
+                ),
+              ] else
+                const _FeaturePlaceholder(),
               const Spacer(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(gradient: AppColors.buttonGradient, borderRadius: BorderRadius.circular(16)),
+                child: Icon(icon, color: Colors.white),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
             ],
           ),
         ),

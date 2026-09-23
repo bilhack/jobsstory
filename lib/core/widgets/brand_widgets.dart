@@ -104,6 +104,7 @@ class BrandTextField extends StatelessWidget {
     this.keyboardType,
     this.textInputAction,
     this.onSubmitted,
+    this.maxLines = 1,
   });
 
   final TextEditingController controller;
@@ -112,6 +113,7 @@ class BrandTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +122,7 @@ class BrandTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
+      maxLines: maxLines,
       onSubmitted: onSubmitted,
       style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
       decoration: InputDecoration(

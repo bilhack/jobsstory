@@ -1,5 +1,5 @@
 // JobsStory Cloud Storage rules.
-// Phase 1: only avatar uploads (own file path). Story/reel media ships in Phase 2.
+// Phase 1: avatar uploads. Phase 2: story videos (own paths).
 service firebase.storage {
   match /b/{bucket}/o {
     // Users may manage only their own avatar.
@@ -7,6 +7,13 @@ service firebase.storage {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if request.auth != null && request.auth.uid == uid &&
         filename == 'avatar.jpg';
+    }
+
+    // Story media lives under the owner path. Phase 3 adds approved-read access
+    // for the feed.
+    match /stories/{uid}/{filename} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid;
     }
 
     // Everything else stays locked.
