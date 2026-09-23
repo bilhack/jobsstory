@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "426762692001",
+    "project_id": "jobsstory-app",
+    "storage_bucket": "jobsstory-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426762692001:android:67e5426d09d853e95697e0",
+        "android_client_info": {
+          "package_name": "com.jobsstory.jobsstory"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "426762692001-4kor0hr6lbs8l41cv8a17r7qktqtsvs6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjBPploutmzHNlFVNHpDlw_Ny8vFmZVVk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "426762692001-4kor0hr6lbs8l41cv8a17r7qktqtsvs6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

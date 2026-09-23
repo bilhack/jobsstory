@@ -3,16 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../../firebase_options.dart';
 
-/// Initializes the app with Firebase when options are configured.
-/// Runs before runApp and keeps the splash until ready.
+/// Initializes the app with Firebase before runApp.
 class AppBootstrap {
   static Future<void> initialize() async {
     WidgetsFlutterBinding.ensureInitialized();
-    final options = DefaultFirebaseOptions.currentPlatform;
-    if (options == null) {
-      // No Firebase project linked yet: app still boots in preview mode.
-      return;
-    }
-    await Firebase.initializeApp(options: options);
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
 }
