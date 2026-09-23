@@ -1,14 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/config/app_strings.dart';
+import '../../core/models/app_user.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Onboarding — pick your role: Job Seeker or Recruiter.
-/// Phase 1 wires this to Auth + Firebase.
+/// Handles both guests (→ register) and signed-in users without a role (→ save role).
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
   static const String route = '/onboarding';
+
+  Future<void> _select(BuildContext context, UserRole role) async {
+    final auth = context.read<AuthProvider>();
+    if (auth.isAuthenticated && !auth.hasRole) {
+      await auth.completeOnboarding(role);
+      // Redirect logic sends the user to /home automatically.
+    } else {
+      context.pushNamed('register', queryParameters: {'role': role.value});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +48,7 @@ class OnboardingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'اختر دورك وابدأ رحلتك.',
+                AppStrings.onboardingSubtitle,
                 style: Theme.of(context)
                     .textTheme
                     .bodyLarge
@@ -46,7 +60,7 @@ class OnboardingScreen extends StatelessWidget {
                 title: isAr ? AppStrings.roleSeekerAr : AppStrings.roleSeeker,
                 description: AppStrings.roleSeekerDesc,
                 gradient: AppColors.buttonGradient,
-                onTap: () => _comingSoon(context, isAr ? AppStrings.roleSeekerAr : AppStrings.roleSeeker),
+                onTap: () => _select(context, UserRole.seeker),
               ),
               const SizedBox(height: 20),
               _RoleCard(
@@ -56,7 +70,7 @@ class OnboardingScreen extends StatelessWidget {
                 gradient: const LinearGradient(
                   colors: [AppColors.accent, AppColors.primary],
                 ),
-                onTap: () => _comingSoon(context, isAr ? AppStrings.roleRecruiterAr : AppStrings.roleRecruiter),
+                onTap: () => _select(context, UserRole.recruiter),
               ),
               const Spacer(),
             ],
@@ -64,17 +78,6 @@ class OnboardingScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  void _comingSoon(BuildContext context, String role) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$role — قريباً في المرحلة 1 (التسجيل والمصادقة)'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
   }
 }
 

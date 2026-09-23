@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config/app_strings.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/brand_widgets.dart';
 
 /// Welcome — bold gradient, logo, slogan and a single CTA.
 class WelcomeScreen extends StatelessWidget {
@@ -56,7 +57,7 @@ class WelcomeScreen extends StatelessWidget {
                           ),
                     ),
                     const Spacer(flex: 3),
-                    _GradientButton(
+                    GradientButton(
                       label: isAr ? AppStrings.ctaStartAr : AppStrings.ctaStart,
                       onPressed: () => context.pushNamed('onboarding'),
                     ),
@@ -131,50 +132,6 @@ class _GlowOrb extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: color.withValues(alpha: opacity),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GradientButton extends StatelessWidget {
-  const _GradientButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: AppColors.buttonGradient,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(28),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.4,
-                color: Colors.white,
-              ),
-            ),
           ),
         ),
       ),

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import 'core/config/app_strings.dart';
 import 'core/firebase/bootstrap.dart';
+import 'core/providers/auth_provider.dart';
 import 'core/router/app_router.dart';
+import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
@@ -13,7 +17,30 @@ Future<void> main() async {
 
 /// Root widget — Arabic-first, full RTL support, vibrant dark theme.
 class JobsStoryApp extends StatelessWidget {
-  const JobsStoryApp({super.key});
+  const JobsStoryApp({super.key, this.authService});
+
+  /// Injectable for tests; production uses the real Firebase service.
+  final AuthService? authService;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AuthProvider(service: authService ?? FirebaseAuthService()),
+      child: const _AppShell(),
+    );
+  }
+}
+
+class _AppShell extends StatefulWidget {
+  const _AppShell();
+
+  @override
+  State<_AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<_AppShell> {
+  // Created once: the router listens to auth changes via refreshListenable.
+  late final GoRouter _router = AppRouter.createRouter(context.read<AuthProvider>());
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +48,7 @@ class JobsStoryApp extends StatelessWidget {
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
-      routerConfig: AppRouter.createRouter(),
+      routerConfig: _router,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar'), Locale('en')],
       localizationsDelegates: const [
