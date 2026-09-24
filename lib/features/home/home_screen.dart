@@ -8,6 +8,9 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../feed/saved_candidates_screen.dart';
 import '../feed/story_feed_screen.dart';
+import '../jobs/jobs_browse_screen.dart';
+import '../jobs/my_applications_screen.dart';
+import '../jobs/my_jobs_screen.dart';
 import '../story/my_stories_screen.dart';
 import '../story/studio_screen.dart';
 
@@ -116,12 +119,33 @@ class HomeScreen extends StatelessWidget {
                         subtitle: (isAr ? 'اعرض قصصك وراجع حالاتها' : 'See your stories and their status'),
                         onTap: () => context.go(MyStoriesScreen.route),
                       ),
+                      const SizedBox(height: 12),
+                      _ActionCard(
+                        icon: Icons.work_rounded,
+                        title: (isAr ? AppStrings.jobsAr : AppStrings.jobs),
+                        subtitle: (isAr ? AppStrings.jobsHintAr : AppStrings.jobsHint),
+                        onTap: () => context.go(JobsBrowseScreen.route),
+                      ),
+                      const SizedBox(height: 12),
+                      _ActionCard(
+                        icon: Icons.send_rounded,
+                        title: (isAr ? AppStrings.myApplicationsAr : AppStrings.myApplications),
+                        subtitle: (isAr ? AppStrings.noApplicationsHintAr : AppStrings.noApplicationsHint),
+                        onTap: () => context.go(MyApplicationsScreen.route),
+                      ),
                     ] else ...[
                       _ActionCard(
                         icon: Icons.bookmark_rounded,
                         title: (isAr ? AppStrings.candidatesAr : AppStrings.candidates),
                         subtitle: (isAr ? AppStrings.candidatesHintAr : AppStrings.candidatesHint),
                         onTap: () => context.go(SavedCandidatesScreen.route),
+                      ),
+                      const SizedBox(height: 12),
+                      _ActionCard(
+                        icon: Icons.work_rounded,
+                        title: (isAr ? AppStrings.myJobsAr : AppStrings.myJobs),
+                        subtitle: (isAr ? AppStrings.myJobsHintAr : AppStrings.myJobsHint),
+                        onTap: () => context.go(MyJobsScreen.route),
                       ),
                     ],
                   ],

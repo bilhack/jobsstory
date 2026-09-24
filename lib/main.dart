@@ -6,12 +6,17 @@ import 'package:provider/provider.dart';
 import 'core/config/app_strings.dart';
 import 'core/firebase/bootstrap.dart';
 import 'core/media/feed_video_tile.dart';
+import 'core/providers/applications_provider.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/feed_provider.dart';
+import 'core/providers/jobs_provider.dart';
 import 'core/providers/story_interaction_provider.dart';
 import 'core/providers/story_provider.dart';
 import 'core/router/app_router.dart';
+import 'core/services/application_repository.dart';
 import 'core/services/auth_service.dart';
+import 'core/services/job_repository.dart';
+import 'core/services/notification_service.dart';
 import 'core/services/story_interaction_service.dart';
 import 'core/services/story_service.dart';
 import 'core/services/user_repository.dart';
@@ -31,6 +36,9 @@ class JobsStoryApp extends StatelessWidget {
     this.interactionService,
     this.userRepository,
     this.feedVideoTile,
+    this.jobRepository,
+    this.applicationRepository,
+    this.notificationService,
   });
 
   /// Injectable for tests; production uses the real Firebase services.
@@ -39,6 +47,9 @@ class JobsStoryApp extends StatelessWidget {
   final StoryInteractionService? interactionService;
   final UserRepository? userRepository;
   final FeedVideoTile? feedVideoTile;
+  final JobRepository? jobRepository;
+  final ApplicationRepository? applicationRepository;
+  final NotificationService? notificationService;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +69,16 @@ class JobsStoryApp extends StatelessWidget {
             service: interactionService ?? FirebaseStoryInteractionService(),
           ),
         ),
+        ChangeNotifierProvider(
+          create: (_) => JobsProvider(
+            repository: jobRepository ?? FirestoreJobRepository(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ApplicationsProvider(
+            repository: applicationRepository ?? FirestoreApplicationRepository(),
+          ),
+        ),
         Provider<UserRepository>(
           create: (_) => userRepository ?? FirestoreUserRepository(),
         ),
@@ -66,6 +87,9 @@ class JobsStoryApp extends StatelessWidget {
         ),
         Provider<StoryService>(
           create: (_) => storyService ?? FirebaseStoryService(),
+        ),
+        Provider<NotificationService>(
+          create: (_) => notificationService ?? FirebaseNotificationService(),
         ),
       ],
       child: const _AppShell(),
@@ -83,6 +107,39 @@ class _AppShell extends StatefulWidget {
 class _AppShellState extends State<_AppShell> {
   // Created once: the router listens to auth changes via refreshListenable.
   late final GoRouter _router = AppRouter.createRouter(context.read<AuthProvider>());
+  // Captured for the listener/dispose (never read via context after the
+  // element may be deactivated).
+  late final AuthProvider _auth = context.read<AuthProvider>();
+
+  String? _registeredUid;
+
+  @override
+  void initState() {
+    super.initState();
+    _auth.addListener(_syncNotifications);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncNotifications());
+  }
+
+  @override
+  void dispose() {
+    _auth.removeListener(_syncNotifications);
+    super.dispose();
+  }
+
+  /// Keeps the device's FCM token on the signed-in user's profile.
+  void _syncNotifications() {
+    final uid = _auth.isAuthenticated ? _auth.snapshot.profile?.uid : null;
+    final notifications = context.read<NotificationService>();
+    if (uid != null && uid.isNotEmpty) {
+      if (_registeredUid != uid) {
+        _registeredUid = uid;
+        notifications.register(uid);
+      }
+    } else if (_registeredUid != null) {
+      notifications.unregister(_registeredUid!);
+      _registeredUid = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

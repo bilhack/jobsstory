@@ -3,6 +3,7 @@ rules_version = '2';
 // JobsStory Firestore security rules.
 // Phase 1: profiles + authentication. Phase 2: stories.
 // Phase 3: public profiles for the feed, plus likes/saves/reports collections.
+// Phase 4: job postings + applications (recruiters own jobs; seekers apply).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -56,6 +57,44 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         request.resource.data.reportedBy == request.auth.uid;
       allow read, update, delete: if false;
+    }
+
+    // Jobs: a recruiter creates/updates only their own postings; everyone
+    // authenticated may read open jobs, owners may also read their closed ones.
+    match /jobs/{jobId} {
+      allow create: if request.auth != null &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow read: if request.auth != null && (
+        resource.data.status == 'open' ||
+        resource.data.createdBy == request.auth.uid
+      );
+      allow update: if request.auth != null &&
+        request.auth.uid == resource.data.createdBy &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow delete: if request.auth != null &&
+        request.auth.uid == resource.data.createdBy;
+    }
+
+    // Applications: a seeker submits only their own; the applicant and the
+    // job owner may read; the recruiter updates status/notes, the seeker
+    // may withdraw.
+    match /applications/{applicationId} {
+      allow create: if request.auth != null &&
+        request.resource.data.seekerUid == request.auth.uid;
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.seekerUid ||
+        isJobOwner(request.auth.uid, resource.data.jobId)
+      );
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.seekerUid ||
+        isJobOwner(request.auth.uid, resource.data.jobId)
+      ) && request.resource.data.seekerUid == resource.data.seekerUid;
+      allow delete: if false; // moderation/none in v1.
+    }
+
+    function isJobOwner(uid, jobId) {
+      return exists(/databases/$(database)/documents/jobs/$(jobId)) &&
+        get(/databases/$(database)/documents/jobs/$(jobId)).data.createdBy == uid;
     }
 
     // Everything else stays locked until its feature ships.

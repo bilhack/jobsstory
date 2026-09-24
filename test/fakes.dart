@@ -5,8 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:jobsstory/core/media/feed_video_tile.dart';
 import 'package:jobsstory/core/media/media_picker.dart';
 import 'package:jobsstory/core/models/app_user.dart';
+import 'package:jobsstory/core/models/job.dart';
+import 'package:jobsstory/core/models/job_application.dart';
 import 'package:jobsstory/core/models/story.dart';
+import 'package:jobsstory/core/services/application_repository.dart';
 import 'package:jobsstory/core/services/auth_service.dart';
+import 'package:jobsstory/core/services/job_repository.dart';
+import 'package:jobsstory/core/services/notification_service.dart';
 import 'package:jobsstory/core/services/story_interaction_service.dart';
 import 'package:jobsstory/core/services/story_service.dart';
 import 'package:jobsstory/core/services/user_repository.dart';
@@ -243,6 +248,99 @@ class FakeStoryInteractionService implements StoryInteractionService {
   }) async {
     reports.add({'targetId': storyId, 'reportedBy': reportedBy, 'reason': reason});
   }
+}
+
+/// In-memory JobRepository for Phase 4 widget/unit tests.
+class FakeJobRepository implements JobRepository {
+  final Map<String, Job> _jobs = {};
+
+  void seed(List<Job> jobs) {
+    for (final job in jobs) {
+      _jobs[job.id] = job;
+    }
+  }
+
+  Iterable<Job> get all => _jobs.values;
+
+  @override
+  Future<Job?> get(String id) async => _jobs[id];
+
+  @override
+  Future<List<Job>> listOpen() async =>
+      _jobs.values.where((j) => j.status == JobStatus.open).toList();
+
+  @override
+  Future<List<Job>> listMine(String recruiterUid) async =>
+      _jobs.values.where((j) => j.createdBy == recruiterUid).toList();
+
+  @override
+  Future<Job> create({required Job job}) async {
+    _jobs[job.id] = job;
+    return job;
+  }
+
+  @override
+  Future<void> setStatus(String id, JobStatus status) async {
+    final existing = _jobs[id];
+    if (existing != null) _jobs[id] = existing.copyWith(status: status);
+  }
+}
+
+/// In-memory ApplicationRepository for Phase 4 widget/unit tests.
+class FakeApplicationRepository implements ApplicationRepository {
+  final Map<String, JobApplication> _apps = {};
+
+  void seed(List<JobApplication> apps) {
+    for (final app in apps) {
+      _apps[app.id] = app;
+    }
+  }
+
+  Iterable<JobApplication> get all => _apps.values;
+
+  @override
+  Future<JobApplication?> applicationFor({
+    required String jobId,
+    required String seekerUid,
+  }) async =>
+      _apps['${jobId}_$seekerUid'];
+
+  @override
+  Future<List<JobApplication>> applicationsForJob(String jobId) async =>
+      _apps.values.where((a) => a.jobId == jobId).toList();
+
+  @override
+  Future<List<JobApplication>> applicationsBySeeker(String seekerUid) async =>
+      _apps.values.where((a) => a.seekerUid == seekerUid).toList();
+
+  @override
+  Future<void> submit({required JobApplication application}) async {
+    _apps[application.id] = application;
+  }
+
+  @override
+  Future<void> setStatus(String id, ApplicationStatus status) async {
+    final existing = _apps[id];
+    if (existing != null) _apps[id] = existing.copyWith(status: status);
+  }
+
+  @override
+  Future<void> setNote(String id, String note) async {
+    final existing = _apps[id];
+    if (existing != null) _apps[id] = existing.copyWith(recruiterNote: note);
+  }
+}
+
+/// Records FCM register/unregister calls for the shell wiring.
+class FakeNotificationService implements NotificationService {
+  final List<String> registered = [];
+  final List<String> unregistered = [];
+
+  @override
+  Future<void> register(String uid) async => registered.add(uid);
+
+  @override
+  Future<void> unregister(String uid) async => unregistered.add(uid);
 }
 
 /// Fake video tile: no platform channels, renders a static placeholder.

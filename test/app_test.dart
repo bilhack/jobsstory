@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jobsstory/core/media/media_picker.dart';
 import 'package:jobsstory/core/models/app_user.dart';
+import 'package:jobsstory/core/models/job.dart';
+import 'package:jobsstory/core/models/job_application.dart';
 import 'package:jobsstory/core/models/story.dart';
 import 'package:jobsstory/main.dart';
 import 'package:provider/provider.dart';
@@ -362,5 +364,221 @@ void main() {
     // Redirected back home.
     expect(find.textContaining('أهلاً'), findsOneWidget);
     expect(find.text('المرشحون'), findsNothing);
+  });
+
+  testWidgets('Seeker browses open jobs and opens the detail', (tester) async {
+    final jobs = FakeJobRepository()
+      ..seed([
+        Job(id: 'j1', title: 'مطور فلاتر', company: 'شركة النور', location: 'دبي', description: 'نبحث عن مهندس واجهات متحمس.', createdBy: 'r1'),
+      ]);
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInSeeker),
+      storyService: FakeStoryService(),
+      userRepository: FakeUserRepository(),
+      feedVideoTile: FakeFeedVideoTile(),
+      jobRepository: jobs,
+      applicationRepository: FakeApplicationRepository(),
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/jobs');
+
+    expect(find.text('مطور فلاتر'), findsOneWidget);
+    expect(find.text('شركة النور • دبي'), findsOneWidget);
+
+    await tester.tap(find.text('مطور فلاتر'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('نبحث عن مهندس واجهات متحمس.'), findsOneWidget);
+    expect(find.text('قدّم بقصتك'), findsOneWidget);
+  });
+
+  testWidgets('Seeker applies with their approved story and tracks it', (tester) async {
+    final storyService = FakeStoryService()
+      ..seed(const [
+        Story(id: 's1', ownerUid: 'u1', caption: 'قصتي', status: StoryStatus.approved),
+      ]);
+    final applications = FakeApplicationRepository();
+    final jobs = FakeJobRepository()
+      ..seed([
+        Job(id: 'j1', title: 'مطور فلاتر', company: 'شركة النور', createdBy: 'r1'),
+      ]);
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInSeeker),
+      storyService: storyService,
+      userRepository: FakeUserRepository(),
+      feedVideoTile: FakeFeedVideoTile(),
+      jobRepository: jobs,
+      applicationRepository: applications,
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/jobs');
+    await tester.tap(find.text('مطور فلاتر'));
+    await tester.pumpAndSettle();
+
+    // One-tap apply attaches the approved story.
+    await tester.tap(find.text('قدّم بقصتك'));
+    await tester.pumpAndSettle();
+
+    expect(applications.all.single.jobId, 'j1');
+    expect(applications.all.single.storyId, 's1');
+    expect(find.text('تم التقديم'), findsOneWidget);
+
+    // The seeker can track the application status.
+    await go(tester, '/my-applications');
+    expect(find.text('مطور فلاتر'), findsOneWidget);
+    expect(find.text('جديد'), findsOneWidget);
+  });
+
+  testWidgets('Seeker without an approved story is prompted to create one', (tester) async {
+    final jobs = FakeJobRepository()
+      ..seed([
+        Job(id: 'j1', title: 'مطور فلاتر', company: 'شركة النور', createdBy: 'r1'),
+      ]);
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInSeeker),
+      storyService: FakeStoryService(),
+      userRepository: FakeUserRepository(),
+      feedVideoTile: FakeFeedVideoTile(),
+      jobRepository: jobs,
+      applicationRepository: FakeApplicationRepository(),
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/jobs');
+    await tester.tap(find.text('مطور فلاتر'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('قدّم بقصتك'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('أنشئ قصتك أولاً'), findsOneWidget);
+  });
+
+  testWidgets('Recruiter posts a job and sees it in my jobs', (tester) async {
+    final jobs = FakeJobRepository();
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInRecruiter),
+      storyService: FakeStoryService(),
+      userRepository: FakeUserRepository(),
+      feedVideoTile: FakeFeedVideoTile(),
+      jobRepository: jobs,
+      applicationRepository: FakeApplicationRepository(),
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/my-jobs');
+    expect(find.text('نشر وظيفة'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'نشر وظيفة').first);
+    await tester.pumpAndSettle();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'مهندس جودة');
+    await tester.enterText(fields.at(1), 'شركة الشمس');
+    await tester.enterText(fields.at(2), 'الرياض');
+    await tester.enterText(fields.at(3), 'خبرة ثلاث سنوات');
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'نشر وظيفة'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'نشر وظيفة'));
+    await tester.pumpAndSettle();
+
+    expect(jobs.all.single.title, 'مهندس جودة');
+    expect(find.text('مهندس جودة'), findsOneWidget);
+    expect(find.text('مفتوحة'), findsOneWidget);
+  });
+
+  testWidgets('Recruiter reviews applicants: status, note and contact', (tester) async {
+    final jobs = FakeJobRepository()
+      ..seed([
+        Job(id: 'j1', title: 'مطور فلاتر', company: 'شركة النور', createdBy: 'u1'),
+      ]);
+    final applications = FakeApplicationRepository()
+      ..seed([
+        JobApplication(
+          id: 'j1_sa1',
+          jobId: 'j1',
+          seekerUid: 'sa1',
+          seekerName: 'ليلى',
+          seekerHeadline: 'مصممة واجهات',
+          seekerEmail: 'laila@test.dev',
+        ),
+      ]);
+    final interactions = FakeStoryInteractionService();
+
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInRecruiter),
+      storyService: FakeStoryService(),
+      interactionService: interactions,
+      userRepository: FakeUserRepository(),
+      feedVideoTile: FakeFeedVideoTile(),
+      jobRepository: jobs,
+      applicationRepository: applications,
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/my-jobs');
+    await tester.tap(find.text('مطور فلاتر'));
+    await tester.pumpAndSettle();
+
+    // The interested seeker is listed with a pending status.
+    expect(find.text('ليلى'), findsOneWidget);
+    expect(find.text('جديد'), findsOneWidget);
+
+    // Update to "contacted".
+    await tester.tap(find.text('جديد'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('تم التواصل'));
+    await tester.pumpAndSettle();
+    expect(applications.all.single.status, ApplicationStatus.contacted);
+    expect(find.text('تم التواصل'), findsOneWidget);
+
+    // Add a private note.
+    await tester.tap(find.text('ملاحظة خاصة'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'ممتازة');
+    await tester.tap(find.text('حفظ الملاحظة'));
+    await tester.pumpAndSettle();
+    expect(applications.all.single.recruiterNote, 'ممتازة');
+    expect(find.text('ممتازة'), findsOneWidget);
+
+    // One-tap contact: copy the email.
+    await tester.tap(find.text('تواصل'));
+    await tester.pumpAndSettle();
+    expect(find.text('laila@test.dev'), findsOneWidget);
+    await tester.tap(find.text('نسخ البريد'));
+    await tester.pumpAndSettle();
+    expect(find.text('تم نسخ البريد'), findsOneWidget);
+  });
+
+  testWidgets('Guard rails: job sections are role-specific', (tester) async {
+    final auth = FakeAuthService(FakeStatus.signedInRecruiter);
+    await tester.pumpWidget(JobsStoryApp(
+      authService: auth,
+      storyService: FakeStoryService(),
+      jobRepository: FakeJobRepository(),
+      applicationRepository: FakeApplicationRepository(),
+    ));
+    await tester.pumpAndSettle();
+
+    // Recruiters cannot browse seeker jobs.
+    await go(tester, '/jobs');
+    expect(find.textContaining('أهلاً'), findsOneWidget);
+    expect(find.text('وظائف'), findsNothing);
+
+    // Flip the session to a seeker (provider instances are re-used,
+    // so switching roles must go through the auth service).
+    await auth.setStatus(FakeStatus.signedInSeeker);
+    await tester.pumpAndSettle();
+
+    // Seekers cannot reach the recruiter's posting screens.
+    await go(tester, '/my-jobs');
+    expect(find.textContaining('أهلاً'), findsOneWidget);
+    expect(find.text('وظائفي'), findsNothing);
+
+    await go(tester, '/jobs/new');
+    expect(find.textContaining('أهلاً'), findsOneWidget);
+    expect(find.text('نشر وظيفة'), findsNothing);
   });
 }
