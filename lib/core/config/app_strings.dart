@@ -95,4 +95,28 @@ class AppStrings {
 
   static String pickFailed(bool isAr) =>
       isAr ? 'تعذّر اختيار الملف، حاول مجدداً.' : 'Could not open the picker.';
+
+  // Phase 3 — feed & interactions
+  static const String explore = 'Explore';
+  static const String exploreAr = 'استكشف';
+  static const String exploreHint = 'Browse candidate stories like TikTok.';
+  static const String exploreHintAr = 'تصفّح قصص المرشحين مثل تيك توك.';
+  static const String feedEmpty = 'No stories yet';
+  static const String feedEmptyAr = 'لا توجد قصص بعد';
+  static const String feedEmptyHint = 'Approved seeker stories will show up here.';
+  static const String feedEmptyHintAr = 'قصص الباحثين المعتمدة تظهر هنا.';
+  static const String viewProfile = 'View profile';
+  static const String viewProfileAr = 'عرض الملف';
+  static const String candidates = 'Saved candidates';
+  static const String candidatesAr = 'المرشحون';
+  static const String candidatesHint = 'Candidates you save from the feed.';
+  static const String candidatesHintAr = 'المرشحون الذين تحفظهم من التغذية.';
+  static const String noCandidates = 'No saved candidates yet';
+  static const String noCandidatesAr = 'لا يوجد مرشحون محفوظون بعد';
+  static const String saved = 'Saved';
+  static const String savedAr = 'محفوظ';
+  static const String saveSeeker = 'Save candidate';
+  static const String saveSeekerAr = 'حفظ المرشح';
+  static const String contact = 'Contact';
+  static const String contactAr = 'تواصل';
 }

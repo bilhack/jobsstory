@@ -5,11 +5,16 @@ import 'package:provider/provider.dart';
 
 import 'core/config/app_strings.dart';
 import 'core/firebase/bootstrap.dart';
+import 'core/media/feed_video_tile.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/providers/feed_provider.dart';
+import 'core/providers/story_interaction_provider.dart';
 import 'core/providers/story_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/auth_service.dart';
+import 'core/services/story_interaction_service.dart';
 import 'core/services/story_service.dart';
+import 'core/services/user_repository.dart';
 import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
@@ -19,11 +24,21 @@ Future<void> main() async {
 
 /// Root widget — Arabic-first, full RTL support, vibrant dark theme.
 class JobsStoryApp extends StatelessWidget {
-  const JobsStoryApp({super.key, this.authService, this.storyService});
+  const JobsStoryApp({
+    super.key,
+    this.authService,
+    this.storyService,
+    this.interactionService,
+    this.userRepository,
+    this.feedVideoTile,
+  });
 
   /// Injectable for tests; production uses the real Firebase services.
   final AuthService? authService;
   final StoryService? storyService;
+  final StoryInteractionService? interactionService;
+  final UserRepository? userRepository;
+  final FeedVideoTile? feedVideoTile;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +49,23 @@ class JobsStoryApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => StoryProvider(service: storyService ?? FirebaseStoryService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => FeedProvider(service: storyService ?? FirebaseStoryService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => StoryInteractionProvider(
+            service: interactionService ?? FirebaseStoryInteractionService(),
+          ),
+        ),
+        Provider<UserRepository>(
+          create: (_) => userRepository ?? FirestoreUserRepository(),
+        ),
+        Provider<FeedVideoTile>(
+          create: (_) => feedVideoTile ?? RealFeedVideoTile(),
+        ),
+        Provider<StoryService>(
+          create: (_) => storyService ?? FirebaseStoryService(),
         ),
       ],
       child: const _AppShell(),

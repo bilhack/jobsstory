@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jobsstory/core/models/story.dart';
+import 'package:jobsstory/core/providers/feed_provider.dart';
+import 'package:jobsstory/core/providers/story_interaction_provider.dart';
 import 'package:jobsstory/core/providers/story_provider.dart';
 
 import 'fakes.dart';
@@ -92,6 +94,72 @@ void main() {
       await provider.load('u1');
 
       expect(provider.stories.map((s) => s.id), ['a', 'b']);
+    });
+  });
+
+  group('FeedProvider', () {
+    test('load returns only approved stories', () async {
+      final service = FakeStoryService();
+      service.seed([
+        const Story(id: 's1', ownerUid: 'u', caption: 'معتمدة', status: StoryStatus.approved),
+        const Story(id: 's2', ownerUid: 'u', caption: 'قيد المراجعة'),
+      ]);
+      final provider = FeedProvider(service: service);
+
+      await provider.load();
+
+      expect(provider.stories.map((s) => s.id), ['s1']);
+    });
+
+    test('surfaces load errors', () async {
+      final service = FakeStoryService()..errorToThrow = StateError('boom');
+      final provider = FeedProvider(service: service);
+
+      await provider.load();
+
+      expect(provider.error, isA<StateError>());
+      expect(provider.stories, isEmpty);
+    });
+  });
+
+  group('StoryInteractionProvider', () {
+    test('toggleLike toggles the set and persists', () async {
+      final service = FakeStoryInteractionService();
+      final provider = StoryInteractionProvider(service: service);
+
+      await provider.loadMine('u1');
+      expect(provider.isLiked('s1'), isFalse);
+
+      await provider.toggleLike(storyId: 's1', userId: 'u1');
+      expect(provider.isLiked('s1'), isTrue);
+      expect(service.liked, contains('s1_u1'));
+
+      await provider.toggleLike(storyId: 's1', userId: 'u1');
+      expect(provider.isLiked('s1'), isFalse);
+      expect(service.liked, isEmpty);
+    });
+
+    test('toggleSaveSeeker toggles candidate saves', () async {
+      final service = FakeStoryInteractionService();
+      final provider = StoryInteractionProvider(service: service);
+
+      await provider.loadMine('u1');
+      await provider.toggleSaveSeeker(seekerId: 'sa', savedById: 'u1');
+      expect(provider.isSaved('sa'), isTrue);
+      expect(service.saved, contains('u1_sa'));
+
+      await provider.toggleSaveSeeker(seekerId: 'sa', savedById: 'u1');
+      expect(provider.isSaved('sa'), isFalse);
+    });
+
+    test('report is forwarded to the service with reason', () async {
+      final service = FakeStoryInteractionService();
+      final provider = StoryInteractionProvider(service: service);
+
+      await provider.report(storyId: 's1', reportedBy: 'u1', reason: 'محتوى غير لائق');
+
+      expect(service.reportCount, 1);
+      expect(service.reports.single['reason'], 'محتوى غير لائق');
     });
   });
 }

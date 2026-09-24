@@ -6,6 +6,8 @@ import '../models/story.dart';
 abstract class StoryRepository {
   Future<void> create({required Story story});
   Future<List<Story>> listOwn(String uid);
+  Future<List<Story>> listApproved();
+  Future<List<Story>> listApprovedOf(String uid);
   Future<void> delete(String storyId);
 }
 
@@ -27,6 +29,25 @@ class FirestoreStoryRepository implements StoryRepository {
   @override
   Future<List<Story>> listOwn(String uid) async {
     final query = await _stories.where('ownerUid', isEqualTo: uid).orderBy('createdAt', descending: true).get();
+    return query.docs.map((doc) => Story.fromDoc(doc.id, doc.data())).toList();
+  }
+
+  @override
+  Future<List<Story>> listApproved() async {
+    final query = await _stories
+        .where('status', isEqualTo: 'approved')
+        .orderBy('createdAt', descending: true)
+        .get();
+    return query.docs.map((doc) => Story.fromDoc(doc.id, doc.data())).toList();
+  }
+
+  @override
+  Future<List<Story>> listApprovedOf(String uid) async {
+    final query = await _stories
+        .where('ownerUid', isEqualTo: uid)
+        .where('status', isEqualTo: 'approved')
+        .orderBy('createdAt', descending: true)
+        .get();
     return query.docs.map((doc) => Story.fromDoc(doc.id, doc.data())).toList();
   }
 

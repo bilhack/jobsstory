@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:jobsstory/core/media/feed_video_tile.dart';
 import 'package:jobsstory/core/media/media_picker.dart';
 import 'package:jobsstory/core/models/app_user.dart';
 import 'package:jobsstory/core/models/story.dart';
 import 'package:jobsstory/core/services/auth_service.dart';
+import 'package:jobsstory/core/services/story_interaction_service.dart';
 import 'package:jobsstory/core/services/story_service.dart';
+import 'package:jobsstory/core/services/user_repository.dart';
 
 enum FakeStatus {
   unsigned,
@@ -140,11 +144,122 @@ class FakeStoryService implements StoryService {
       _stories.where((s) => s.ownerUid == uid).toList();
 
   @override
+  Future<List<Story>> fetchApprovedStories() async {
+    if (errorToThrow != null) throw errorToThrow!;
+    return _stories.where((s) => s.status == StoryStatus.approved).toList();
+  }
+
+  @override
+  Future<List<Story>> fetchApprovedStoriesOf(String uid) async {
+    if (errorToThrow != null) throw errorToThrow!;
+    return _stories
+        .where((s) => s.ownerUid == uid && s.status == StoryStatus.approved)
+        .toList();
+  }
+
+  @override
   Future<void> deleteStory(Story story) async {
     _stories.removeWhere((s) => s.id == story.id);
   }
 
   void seed(List<Story> stories) => _stories.addAll(stories);
+}
+
+/// In-memory UserRepository for profile/feed tests.
+class FakeUserRepository implements UserRepository {
+  final Map<String, AppUser> _users = {};
+
+  void seed(Iterable<AppUser> users) {
+    for (final user in users) {
+      _users[user.uid] = user;
+    }
+  }
+
+  @override
+  Future<AppUser?> get(String uid) async => _users[uid];
+
+  @override
+  Future<void> create({required AppUser user}) async {
+    _users[user.uid] = user;
+  }
+
+  @override
+  Future<void> setRole(String uid, UserRole role) async {
+    final existing = _users[uid];
+    if (existing != null) {
+      _users[uid] = existing.copyWith(role: role);
+    }
+  }
+}
+
+/// In-memory interactions (likes/saves/reports) — no Firebase involved.
+class FakeStoryInteractionService implements StoryInteractionService {
+  final Set<String> liked = {};
+  final Set<String> saved = {};
+  final List<Map<String, String>> reports = [];
+
+  int get reportCount => reports.length;
+  int likeCalls = 0;
+  int saveCalls = 0;
+
+  @override
+  Future<void> likeStory({required String storyId, required String userId}) async {
+    likeCalls++;
+    liked.add('${storyId}_$userId');
+  }
+
+  @override
+  Future<void> unlikeStory({required String storyId, required String userId}) async {
+    likeCalls++;
+    liked.remove('${storyId}_$userId');
+  }
+
+  @override
+  Future<List<String>> likedStoryIds(String userId) async =>
+      liked.where((id) => id.endsWith('_$userId')).map((id) => id.substring(0, id.length - userId.length - 1)).toList();
+
+  @override
+  Future<void> saveSeeker({required String seekerId, required String savedById}) async {
+    saveCalls++;
+    saved.add('${savedById}_$seekerId');
+  }
+
+  @override
+  Future<void> unsaveSeeker({required String seekerId, required String savedById}) async {
+    saveCalls++;
+    saved.remove('${savedById}_$seekerId');
+  }
+
+  @override
+  Future<List<String>> savedSeekerIds(String savedById) async =>
+      saved.where((id) => id.startsWith('${savedById}_')).map((id) => id.substring(savedById.length + 1)).toList();
+
+  @override
+  Future<void> reportStory({
+    required String storyId,
+    required String reportedBy,
+    required String reason,
+    String? details,
+  }) async {
+    reports.add({'targetId': storyId, 'reportedBy': reportedBy, 'reason': reason});
+  }
+}
+
+/// Fake video tile: no platform channels, renders a static placeholder.
+class FakeFeedVideoTile implements FeedVideoTile {
+  @override
+  Widget build({
+    required String videoUrl,
+    String? thumbnailUrl,
+    required bool autoplay,
+    required bool initiallyMuted,
+  }) {
+    return Container(
+      color: const Color(0xFF232338),
+      alignment: Alignment.center,
+      child: const Icon(Icons.videocam_outlined, size: 72, color: Color(0xFFB8B8CC)),
+    );
+  }
 }
 
 /// Returns pre-made files so gallery-pick flows work without platform channels.

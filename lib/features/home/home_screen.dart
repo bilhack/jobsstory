@@ -6,11 +6,13 @@ import '../../core/config/app_strings.dart';
 import '../../core/models/app_user.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../feed/saved_candidates_screen.dart';
+import '../feed/story_feed_screen.dart';
 import '../story/my_stories_screen.dart';
 import '../story/studio_screen.dart';
 
-/// Post-auth shell. Seekers create/manage their story; recruiters get a
-/// placeholder for the candidate feed arriving in Phase 3.
+/// Post-auth shell. Both roles get the discover feed; seekers create and
+/// manage their story, recruiters manage their saved candidates.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -90,23 +92,41 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              if (isSeeker) ...[
-                _ActionCard(
-                  icon: Icons.videocam_rounded,
-                  title: (isAr ? AppStrings.createStoryCtaAr : AppStrings.createStoryCta),
-                  subtitle: (isAr ? AppStrings.studioHintAr : AppStrings.studioHint),
-                  onTap: () => context.go(StoryStudioScreen.route),
+              Expanded(
+                child: ListView(
+                  children: [
+                    _ActionCard(
+                      icon: Icons.explore_rounded,
+                      title: (isAr ? AppStrings.exploreAr : AppStrings.explore),
+                      subtitle: (isAr ? AppStrings.exploreHintAr : AppStrings.exploreHint),
+                      onTap: () => context.go(StoryFeedScreen.route),
+                    ),
+                    const SizedBox(height: 12),
+                    if (isSeeker) ...[
+                      _ActionCard(
+                        icon: Icons.videocam_rounded,
+                        title: (isAr ? AppStrings.createStoryCtaAr : AppStrings.createStoryCta),
+                        subtitle: (isAr ? AppStrings.studioHintAr : AppStrings.studioHint),
+                        onTap: () => context.go(StoryStudioScreen.route),
+                      ),
+                      const SizedBox(height: 12),
+                      _ActionCard(
+                        icon: Icons.video_library_rounded,
+                        title: (isAr ? AppStrings.myStoriesAr : AppStrings.myStories),
+                        subtitle: (isAr ? 'اعرض قصصك وراجع حالاتها' : 'See your stories and their status'),
+                        onTap: () => context.go(MyStoriesScreen.route),
+                      ),
+                    ] else ...[
+                      _ActionCard(
+                        icon: Icons.bookmark_rounded,
+                        title: (isAr ? AppStrings.candidatesAr : AppStrings.candidates),
+                        subtitle: (isAr ? AppStrings.candidatesHintAr : AppStrings.candidatesHint),
+                        onTap: () => context.go(SavedCandidatesScreen.route),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 12),
-                _ActionCard(
-                  icon: Icons.video_library_rounded,
-                  title: (isAr ? AppStrings.myStoriesAr : AppStrings.myStories),
-                  subtitle: (isAr ? 'اعرض قصصك وراجع حالاتها' : 'See your stories and their status'),
-                  onTap: () => context.go(MyStoriesScreen.route),
-                ),
-              ] else
-                const _FeaturePlaceholder(),
-              const Spacer(),
+              ),
             ],
           ),
         ),
@@ -158,34 +178,6 @@ class _ActionCard extends StatelessWidget {
               const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeaturePlaceholder extends StatelessWidget {
-  const _FeaturePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            const Icon(Icons.rocket_launch_rounded, color: AppColors.accent, size: 36),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                isAr
-                    ? 'المرحلة 1 جاهزة!\nقريباً: سجل قصتك، وظائف، وتغذية المرشحين.'
-                    : 'Phase 1 done!\nComing next: your story, jobs & candidate feed.',
-                style: const TextStyle(color: AppColors.textMuted, height: 1.5),
-              ),
-            ),
-          ],
         ),
       ),
     );

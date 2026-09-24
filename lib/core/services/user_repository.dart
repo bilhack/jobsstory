@@ -1,38 +1,37 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/app_user.dart';
 
-/// Data access for the `users` collection.
+/// Reads public profiles and maintains the signed-in user's own profile.
 abstract class UserRepository {
   Future<AppUser?> get(String uid);
   Future<void> create({required AppUser user});
   Future<void> setRole(String uid, UserRole role);
 }
 
-/// Production implementation backed by Cloud Firestore.
+/// Production implementation backed by Cloud Firestore `users/{uid}`.
 class FirestoreUserRepository implements UserRepository {
-  FirestoreUserRepository([FirebaseFirestore? db]) : _db = db ?? FirebaseFirestore.instance;
+  FirestoreUserRepository([FirebaseFirestore? db]) : _db = db;
 
-  final FirebaseFirestore _db;
+  FirebaseFirestore? _db;
 
-  CollectionReference<Map<String, dynamic>> get _users => _db.collection('users');
+  FirebaseFirestore get _firestore => _db ??= FirebaseFirestore.instance;
 
   @override
   Future<AppUser?> get(String uid) async {
-    final doc = await _users.doc(uid).get();
+    if (uid.isEmpty) return null;
+    final doc = await _firestore.collection('users').doc(uid).get();
     if (!doc.exists) return null;
-    return AppUser.fromDoc(uid, doc.data()!);
+    return AppUser.fromDoc(doc.id, doc.data() ?? const {});
   }
 
   @override
   Future<void> create({required AppUser user}) async {
-    await _users.doc(user.uid).set(user.toDoc());
+    await _firestore.collection('users').doc(user.uid).set(user.toDoc());
   }
 
   @override
   Future<void> setRole(String uid, UserRole role) async {
-    await _users.doc(uid).update({'role': role.value});
+    await _firestore.collection('users').doc(uid).update({'role': role.value});
   }
 }

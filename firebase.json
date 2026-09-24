@@ -1,1 +1,28 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"jobsstory-app","appId":"1:426762692001:android:67e5426d09d853e95697e0","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"jobsstory-app","configurations":{"android":"1:426762692001:android:67e5426d09d853e95697e0","ios":"1:426762692001:ios:ffc166efcb92541a5697e0"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "jobsstory-app",
+          "appId": "1:426762692001:android:67e5426d09d853e95697e0",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "jobsstory-app",
+          "configurations": {
+            "android": "1:426762692001:android:67e5426d09d853e95697e0",
+            "ios": "1:426762692001:ios:ffc166efcb92541a5697e0"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

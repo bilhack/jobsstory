@@ -28,6 +28,10 @@ abstract class StoryService {
 
   Future<List<Story>> listOwnStories(String uid);
 
+  Future<List<Story>> fetchApprovedStories();
+
+  Future<List<Story>> fetchApprovedStoriesOf(String uid);
+
   Future<void> deleteStory(Story story);
 }
 
@@ -85,6 +89,12 @@ class FirebaseStoryService implements StoryService {
 
   @override
   Future<List<Story>> listOwnStories(String uid) => _repo.listOwn(uid);
+
+  @override
+  Future<List<Story>> fetchApprovedStories() => _repo.listApproved();
+
+  @override
+  Future<List<Story>> fetchApprovedStoriesOf(String uid) => _repo.listApprovedOf(uid);
 
   @override
   Future<void> deleteStory(Story story) async {
