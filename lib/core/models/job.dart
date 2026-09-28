@@ -22,7 +22,6 @@ class Job {
     required this.company,
     this.location = '',
     this.description = '',
-    this.applyUrl = '',
     required this.createdBy,
     this.status = JobStatus.open,
     this.createdAt,
@@ -33,8 +32,6 @@ class Job {
   final String company;
   final String location;
   final String description;
-  /// Optional external application link (e.g. a LinkedIn job posting).
-  final String applyUrl;
   final String createdBy;
   final JobStatus status;
   final DateTime? createdAt;
@@ -44,7 +41,6 @@ class Job {
         'company': company,
         'location': location,
         'description': description,
-        'applyUrl': applyUrl,
         'createdBy': createdBy,
         'status': status.value,
         'createdAt': createdAt ?? DateTime.now(),
@@ -56,7 +52,6 @@ class Job {
         company: company,
         location: location,
         description: description,
-        applyUrl: applyUrl,
         createdBy: createdBy,
         status: status ?? this.status,
         createdAt: createdAt,
@@ -68,7 +63,6 @@ class Job {
         company: doc['company'] as String? ?? '',
         location: doc['location'] as String? ?? '',
         description: doc['description'] as String? ?? '',
-        applyUrl: doc['applyUrl'] as String? ?? '',
         createdBy: doc['createdBy'] as String? ?? '',
         status: JobStatus.fromValue(doc['status'] as String?),
         createdAt: (doc['createdAt'] as Object?) is DateTime

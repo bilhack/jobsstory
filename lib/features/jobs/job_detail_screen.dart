@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config/app_strings.dart';
 import '../../core/models/job.dart';
@@ -10,6 +9,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/providers/jobs_provider.dart';
 import '../../core/services/story_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/format.dart';
 import '../story/studio_screen.dart';
 
 /// Seeker-only job detail with a one-tap "apply with my story" action.
@@ -85,14 +85,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
-  Future<void> _openExternalApply() async {
-    final url = _job?.applyUrl;
-    if (url == null || url.isEmpty) return;
-    final uri = Uri.tryParse(url.contains('://') ? url : 'https://$url');
-    if (uri == null || !uri.hasScheme) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
   Future<void> _promptCreateStory() async {
     final goStudio = await showDialog<bool>(
       context: context,
@@ -159,41 +151,23 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (hasApplied)
-                              _AppliedBar(isAr: _isAr)
-                            else
-                              FilledButton(
-                                onPressed: _applying ? null : _apply,
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: hasApplied
+                              ? _AppliedBar(isAr: _isAr)
+                              : FilledButton(
+                                  onPressed: _applying ? null : _apply,
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                  ),
+                                  child: _applying
+                                      ? const SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : Text(_isAr ? AppStrings.applyWithStoryAr : AppStrings.applyWithStory),
                                 ),
-                                child: _applying
-                                    ? const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      )
-                                    : Text(_isAr
-                                        ? AppStrings.applyWithStoryAr
-                                        : AppStrings.applyWithStory),
-                              ),
-                            if (_job!.applyUrl.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              OutlinedButton.icon(
-                                onPressed: _openExternalApply,
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                ),
-                                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                                label: Text(
-                                  _isAr ? AppStrings.applyExternalAr : AppStrings.applyExternal,
-                                ),
-                              ),
-                            ],
-                          ],
                         ),
                       ),
                     ],
@@ -217,20 +191,59 @@ class _JobHeader extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(job.title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
-            const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.business_rounded, size: 18, color: AppColors.textMuted),
-                const SizedBox(width: 6),
-                Text(job.company, style: const TextStyle(fontSize: 14)),
-                if (job.location.isNotEmpty) ...[
-                  const SizedBox(width: 14),
-                  const Icon(Icons.place_outlined, size: 18, color: AppColors.textMuted),
-                  const SizedBox(width: 6),
-                  Text(job.location, style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
-                ],
+                Container(
+                  width: 64,
+                  height: 64,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.buttonGradient,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    job.company.isEmpty ? '?' : job.company.characters.first.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 28,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        job.title,
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        job.company,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      ),
+                    ],
+                  ),
+                ),
               ],
+            ),
+            const SizedBox(height: 16),
+            if (job.location.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    const Icon(Icons.place_outlined, size: 16, color: AppColors.textMuted),
+                    const SizedBox(width: 6),
+                    Text(job.location, style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
+                  ],
+                ),
+              ),
+            Text(
+              jobPostedLabel(job.createdAt, isAr),
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
             ),
           ],
         ),

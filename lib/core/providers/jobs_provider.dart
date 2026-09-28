@@ -54,7 +54,6 @@ class JobsProvider extends ChangeNotifier {
     required String company,
     String location = '',
     String description = '',
-    String applyUrl = '',
     required String createdBy,
   }) async {
     final job = Job(
@@ -63,7 +62,6 @@ class JobsProvider extends ChangeNotifier {
       company: company.trim(),
       location: location.trim(),
       description: description.trim(),
-      applyUrl: applyUrl.trim(),
       createdBy: createdBy,
     );
     await _repository.create(job: job);

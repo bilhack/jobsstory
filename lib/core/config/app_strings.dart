@@ -181,14 +181,6 @@ class AppStrings {
   static const String noApplicantsHintAr = 'شارك الوظيفة ليُقبل عليها الباحثون.';
   static const String applyWithStory = 'Apply with my story';
   static const String applyWithStoryAr = 'قدّم بقصتك';
-  static const String applyUrlLabel = 'External apply link';
-  static const String applyUrlLabelAr = 'رابط التقديم الخارجي';
-  static const String applyExternal = 'Apply on LinkedIn';
-  static const String applyExternalAr = 'قدّم عبر لينكد إن';
-  static const String browseLinkedInMore = 'Find more jobs on LinkedIn';
-  static const String browseLinkedInMoreAr = 'تصفّح المزيد من الوظائف على لينكد إن';
-  static const String browseLinkedIn = 'Search on LinkedIn';
-  static const String browseLinkedInAr = 'ابحث على لينكد إن';
   static const String applied = 'Applied';
   static const String appliedAr = 'تم التقديم';
   static const String appliedSnack = 'Your application was sent';
