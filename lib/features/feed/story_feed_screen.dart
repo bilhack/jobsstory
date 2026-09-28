@@ -12,6 +12,7 @@ import '../../core/providers/feed_provider.dart';
 import '../../core/providers/story_interaction_provider.dart';
 import '../../core/services/user_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/brand_widgets.dart';
 import '../profile/seeker_profile_screen.dart';
 
 /// Vertical full-screen feed of approved stories — TikTok-style browsing.
@@ -109,7 +110,7 @@ class _StoryFeedScreenState extends State<StoryFeedScreen> {
     return Scaffold(
       body: SafeArea(
         child: feed.loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+            ? const _FeedSkeleton()
             : feed.error != null
                 ? _FeedError(isAr: _isAr, onRetry: _init)
                 : feed.stories.isEmpty
@@ -189,11 +190,14 @@ class _FeedPage extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        tile.build(
-          videoUrl: story.videoUrl,
-          thumbnailUrl: story.thumbnailUrl,
-          autoplay: active,
-          initiallyMuted: true,
+        _DoubleTapLike(
+          onDoubleTap: onLike,
+          child: tile.build(
+            videoUrl: story.videoUrl,
+            thumbnailUrl: story.thumbnailUrl,
+            autoplay: active,
+            initiallyMuted: true,
+          ),
         ),
         const _Scrim(top: true, colors: [Color(0x66000000), Color(0x00000000)]),
         const _Scrim(top: false, colors: [Color(0x00000000), Color(0xCC000000)]),
@@ -203,9 +207,15 @@ class _FeedPage extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  isAr ? AppStrings.appNameAr : AppStrings.appName,
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+                Row(
+                  children: [
+                    const GradientMark(size: 30),
+                    const SizedBox(width: 8),
+                    Text(
+                      isAr ? AppStrings.appNameAr : AppStrings.appName,
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: 0.3),
+                    ),
+                  ],
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -222,11 +232,12 @@ class _FeedPage extends StatelessWidget {
         Positioned(
           left: 0,
           right: 72,
-          bottom: 20,
+          bottom: 0,
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 80, 16, 20),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -285,11 +296,14 @@ class _FeedPage extends StatelessWidget {
         ),
         Positioned(
           right: 10,
-          bottom: 20,
+          bottom: 0,
           child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            child: Padding(
+              padding: const EdgeInsets.only(top: 80, bottom: 20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 _RailAction(
                   icon: liked ? Icons.favorite : Icons.favorite_border,
                   active: liked,
@@ -311,6 +325,7 @@ class _FeedPage extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ],
     );
   }
@@ -327,7 +342,7 @@ class _RailAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withValues(alpha: 0.35),
+      color: AppColors.glass,
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
@@ -345,6 +360,144 @@ class _RailAction extends StatelessWidget {
   }
 }
 
+/// TikTok-style double-tap-to-like with a flying heart burst.
+class _DoubleTapLike extends StatefulWidget {
+  const _DoubleTapLike({required this.onDoubleTap, required this.child});
+
+  final VoidCallback onDoubleTap;
+  final Widget child;
+
+  @override
+  State<_DoubleTapLike> createState() => _DoubleTapLikeState();
+}
+
+class _DoubleTapLikeState extends State<_DoubleTapLike> {
+  int _burst = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const ValueKey('feed-double-tap'),
+      behavior: HitTestBehavior.opaque,
+      onDoubleTap: () {
+        widget.onDoubleTap();
+        setState(() => _burst++);
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          widget.child,
+          if (_burst > 0)
+            Center(
+              child: TweenAnimationBuilder<double>(
+                key: ValueKey<int>(_burst),
+                tween: Tween(begin: 0.4, end: 1.15),
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutBack,
+                onEnd: () {
+                  if (mounted) setState(() => _burst = 0);
+                },
+                builder: (context, scale, _) => Opacity(
+                  opacity: scale < 0.85 ? 1 : (1 - (scale - 0.85) / 0.35).clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: scale,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppColors.buttonGradient,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.secondary.withValues(alpha: 0.5),
+                            blurRadius: 36,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 60),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shimmering placeholder while the feed is loading.
+class _FeedSkeleton extends StatefulWidget {
+  const _FeedSkeleton();
+
+  @override
+  State<_FeedSkeleton> createState() => _FeedSkeletonState();
+}
+
+class _FeedSkeletonState extends State<_FeedSkeleton> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween(begin: 0.4, end: 0.9).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            decoration: const BoxDecoration(gradient: AppColors.heroGradient),
+            child: const Center(child: Icon(Icons.videocam_outlined, size: 88, color: Colors.white38)),
+          ),
+          const SafeArea(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SkeletonBar(width: 120, height: 18),
+                  SizedBox(height: 16),
+                  _SkeletonBar(width: 200, height: 13),
+                  SizedBox(height: 8),
+                  _SkeletonBar(width: 150, height: 13),
+                  Spacer(),
+                  _SkeletonBar(width: 110, height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonBar extends StatelessWidget {
+  const _SkeletonBar({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white24,
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+}
+
 class _Scrim extends StatelessWidget {
   const _Scrim({required this.top, required this.colors});
 
@@ -354,12 +507,14 @@ class _Scrim extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: top ? Alignment.topCenter : Alignment.bottomCenter,
-            end: top ? Alignment.bottomCenter : Alignment.topCenter,
-            colors: colors,
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: top ? Alignment.topCenter : Alignment.bottomCenter,
+              end: top ? Alignment.bottomCenter : Alignment.topCenter,
+              colors: colors,
+            ),
           ),
         ),
       ),
@@ -382,8 +537,8 @@ class _ReportSheet extends StatelessWidget {
       (isAr ? 'أخرى' : 'Other'),
     ];
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,

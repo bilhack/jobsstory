@@ -306,6 +306,35 @@ void main() {
     expect(find.text('سمر'), findsOneWidget);
   });
 
+  testWidgets('Feed: double-tap likes the story with a heart burst', (tester) async {
+    final storyService = FakeStoryService()
+      ..seed(const [
+        Story(id: 's1', ownerUid: 'seeker_a', caption: 'قصتي', status: StoryStatus.approved, videoUrl: 'https://cdn/1.mp4'),
+      ]);
+    final interactions = FakeStoryInteractionService();
+
+    await tester.pumpWidget(JobsStoryApp(
+      authService: FakeAuthService(FakeStatus.signedInRecruiter),
+      storyService: storyService,
+      interactionService: interactions,
+      userRepository: FakeUserRepository(),
+      feedVideoTile: FakeFeedVideoTile(),
+    ));
+    await tester.pumpAndSettle();
+
+    await go(tester, '/explore');
+
+    await tester.tap(find.byIcon(Icons.videocam_outlined));
+    await tester.pump(const Duration(milliseconds: 80));
+    await tester.tap(find.byIcon(Icons.videocam_outlined));
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(find.byIcon(Icons.favorite_rounded), findsWidgets);
+    await tester.pumpAndSettle();
+
+    expect(interactions.liked, contains('s1_u1'));
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
+  });
+
   testWidgets('Reporting a story records the report', (tester) async {
     final storyService = FakeStoryService()
       ..seed(const [

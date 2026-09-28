@@ -29,7 +29,16 @@ class WelcomeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Spacer(flex: 2),
-                    const Center(child: _LogoMark()),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeOutBack,
+                      builder: (context, value, child) => Transform.scale(
+                        scale: 0.6 + 0.4 * value,
+                        child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+                      ),
+                      child: const Center(child: GradientMark(size: 120)),
+                    ),
                     const SizedBox(height: 32),
                     Text(
                       isAr ? AppStrings.appNameAr : AppStrings.appName,
@@ -59,6 +68,7 @@ class WelcomeScreen extends StatelessWidget {
                     const Spacer(flex: 3),
                     GradientButton(
                       label: isAr ? AppStrings.ctaStartAr : AppStrings.ctaStart,
+                      icon: Icons.rocket_launch_rounded,
                       onPressed: () => context.pushNamed('onboarding'),
                     ),
                     const SizedBox(height: 16),
@@ -68,32 +78,6 @@ class WelcomeScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LogoMark extends StatelessWidget {
-  const _LogoMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 112,
-      height: 112,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: AppColors.buttonGradient,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.secondary.withValues(alpha: 0.5),
-            blurRadius: 40,
-            spreadRadius: 4,
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Icon(Icons.play_arrow_rounded, size: 64, color: Colors.white),
       ),
     );
   }

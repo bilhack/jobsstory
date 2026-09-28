@@ -4,6 +4,75 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../config/app_strings.dart';
 import '../theme/app_theme.dart';
 
+/// Brand circle logo (gradient coin with a play mark).
+class GradientMark extends StatelessWidget {
+  const GradientMark({super.key, this.size = 64});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: AppColors.buttonGradient,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.secondary.withValues(alpha: 0.45),
+            blurRadius: size * 0.55,
+            spreadRadius: size * 0.06,
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.play_arrow_rounded,
+        size: size * 0.58,
+        color: Colors.white,
+      ),
+    );
+  }
+}
+
+/// Small section heading with a gradient accent bar.
+class SectionTitle extends StatelessWidget {
+  const SectionTitle(this.label, {super.key, this.padding});
+
+  final String label;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding ?? const EdgeInsets.only(bottom: 12, top: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+              gradient: AppColors.buttonGradient,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Branded gradient CTA button.
 class GradientButton extends StatelessWidget {
   const GradientButton({
@@ -11,11 +80,13 @@ class GradientButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.loading = false,
+    this.icon,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool loading;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -36,27 +107,37 @@ class GradientButton extends StatelessWidget {
         child: InkWell(
           onTap: loading ? null : onPressed,
           borderRadius: BorderRadius.circular(28),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            child: loading
-                ? const Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: loading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (icon != null) ...[
+                          Icon(icon, size: 22, color: Colors.white),
+                          const SizedBox(width: 8),
+                        ],
+                        Text(
+                          label,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                : Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.4,
-                      color: Colors.white,
-                    ),
-                  ),
-          ),
+            ),
         ),
       ),
     );
