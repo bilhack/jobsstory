@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config/app_strings.dart';
 import '../../core/models/job.dart';
@@ -29,6 +30,11 @@ class _JobsBrowseScreenState extends State<JobsBrowseScreen> {
     });
   }
 
+  Future<void> _openLinkedInJobs() async {
+    const url = 'https://www.linkedin.com/jobs';
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<JobsProvider>();
@@ -43,17 +49,78 @@ class _JobsBrowseScreenState extends State<JobsBrowseScreen> {
         child: provider.loading && jobs.isEmpty
             ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
             : jobs.isEmpty
-                ? _EmptyJobs(isAr: _isAr)
-                : ListView.separated(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: jobs.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) => _JobCard(
-                      job: jobs[index],
-                      isAr: _isAr,
-                      onTap: () => context.push(JobDetailScreen.route(jobs[index].id)),
-                    ),
+                ? _EmptyJobs(isAr: _isAr, onLinkedIn: _openLinkedInJobs)
+                : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                        child: _LinkedInMoreTile(isAr: _isAr, onTap: _openLinkedInJobs),
+                      ),
+                      Expanded(
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                          itemCount: jobs.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) => _JobCard(
+                            job: jobs[index],
+                            isAr: _isAr,
+                            onTap: () => context.push(JobDetailScreen.route(jobs[index].id)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+      ),
+    );
+  }
+}
+
+class _LinkedInMoreTile extends StatelessWidget {
+  const _LinkedInMoreTile({required this.isAr, required this.onTap});
+
+  final bool isAr;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: AppColors.buttonGradient,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(Icons.link_rounded, color: Colors.white),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAr ? AppStrings.browseLinkedInMoreAr : AppStrings.browseLinkedInMore,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'linkedin.com/jobs',
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.open_in_new_rounded, size: 18, color: AppColors.textMuted),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -111,9 +178,10 @@ class _JobCard extends StatelessWidget {
 }
 
 class _EmptyJobs extends StatelessWidget {
-  const _EmptyJobs({required this.isAr});
+  const _EmptyJobs({required this.isAr, required this.onLinkedIn});
 
   final bool isAr;
+  final VoidCallback onLinkedIn;
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +203,12 @@ class _EmptyJobs extends StatelessWidget {
               isAr ? AppStrings.noOpenJobsHintAr : AppStrings.noOpenJobsHint,
               style: const TextStyle(color: AppColors.textMuted),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onLinkedIn,
+              icon: const Icon(Icons.link_rounded, size: 18),
+              label: Text(isAr ? AppStrings.browseLinkedInAr : AppStrings.browseLinkedIn),
             ),
           ],
         ),

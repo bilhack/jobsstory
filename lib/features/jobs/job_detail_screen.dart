@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config/app_strings.dart';
 import '../../core/models/job.dart';
@@ -84,6 +85,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  Future<void> _openExternalApply() async {
+    final url = _job?.applyUrl;
+    if (url == null || url.isEmpty) return;
+    final uri = Uri.tryParse(url.contains('://') ? url : 'https://$url');
+    if (uri == null || !uri.hasScheme) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   Future<void> _promptCreateStory() async {
     final goStudio = await showDialog<bool>(
       context: context,
@@ -150,23 +159,41 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: hasApplied
-                              ? _AppliedBar(isAr: _isAr)
-                              : FilledButton(
-                                  onPressed: _applying ? null : _apply,
-                                  style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                  ),
-                                  child: _applying
-                                      ? const SizedBox(
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        )
-                                      : Text(_isAr ? AppStrings.applyWithStoryAr : AppStrings.applyWithStory),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (hasApplied)
+                              _AppliedBar(isAr: _isAr)
+                            else
+                              FilledButton(
+                                onPressed: _applying ? null : _apply,
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
                                 ),
+                                child: _applying
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : Text(_isAr
+                                        ? AppStrings.applyWithStoryAr
+                                        : AppStrings.applyWithStory),
+                              ),
+                            if (_job!.applyUrl.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                onPressed: _openExternalApply,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                ),
+                                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                                label: Text(
+                                  _isAr ? AppStrings.applyExternalAr : AppStrings.applyExternal,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],

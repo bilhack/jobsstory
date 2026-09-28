@@ -473,7 +473,7 @@ void main() {
   testWidgets('Seeker browses open jobs and opens the detail', (tester) async {
     final jobs = FakeJobRepository()
       ..seed([
-        Job(id: 'j1', title: 'مطور فلاتر', company: 'شركة النور', location: 'دبي', description: 'نبحث عن مهندس واجهات متحمس.', createdBy: 'r1'),
+        Job(id: 'j1', title: 'مطور فلاتر', company: 'شركة النور', location: 'دبي', description: 'نبحث عن مهندس واجهات متحمس.', applyUrl: 'https://www.linkedin.com/jobs/view/123', createdBy: 'r1'),
       ]);
     await tester.pumpWidget(JobsStoryApp(
       authService: FakeAuthService(FakeStatus.signedInSeeker),
@@ -489,12 +489,14 @@ void main() {
 
     expect(find.text('مطور فلاتر'), findsOneWidget);
     expect(find.text('شركة النور • دبي'), findsOneWidget);
+    expect(find.text('تصفّح المزيد من الوظائف على لينكد إن'), findsOneWidget);
 
     await tester.tap(find.text('مطور فلاتر'));
     await tester.pumpAndSettle();
 
     expect(find.text('نبحث عن مهندس واجهات متحمس.'), findsOneWidget);
     expect(find.text('قدّم بقصتك'), findsOneWidget);
+    expect(find.text('قدّم عبر لينكد إن'), findsOneWidget);
   });
 
   testWidgets('Seeker applies with their approved story and tracks it', (tester) async {

@@ -22,6 +22,7 @@ class _JobCreateScreenState extends State<JobCreateScreen> {
   final _title = TextEditingController();
   final _company = TextEditingController();
   final _location = TextEditingController();
+  final _applyUrl = TextEditingController();
   final _description = TextEditingController();
   bool _publishing = false;
 
@@ -32,6 +33,7 @@ class _JobCreateScreenState extends State<JobCreateScreen> {
     _title.dispose();
     _company.dispose();
     _location.dispose();
+    _applyUrl.dispose();
     _description.dispose();
     super.dispose();
   }
@@ -48,6 +50,7 @@ class _JobCreateScreenState extends State<JobCreateScreen> {
             company: _company.text,
             location: _location.text,
             description: _description.text,
+            applyUrl: _applyUrl.text,
             createdBy: me.uid,
           );
       if (!mounted) return;
@@ -93,6 +96,14 @@ class _JobCreateScreenState extends State<JobCreateScreen> {
                   _location,
                   label: _isAr ? AppStrings.locationLabelAr : AppStrings.locationLabel,
                   hint: _isAr ? 'مثال: دبي (اختياري)' : 'e.g. Dubai (optional)',
+                ),
+                const SizedBox(height: 16),
+                _field(
+                  _applyUrl,
+                  label: _isAr ? AppStrings.applyUrlLabelAr : AppStrings.applyUrlLabel,
+                  hint: _isAr
+                      ? 'رابط لينكد إن أو موقع الشركة (اختياري)'
+                      : 'LinkedIn or company apply link (optional)',
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
