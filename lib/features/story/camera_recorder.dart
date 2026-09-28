@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/config/app_strings.dart';
 import '../../core/theme/app_theme.dart';
 
 const int kCameraRecorderSeconds = 60;
@@ -15,10 +16,12 @@ class CameraRecorder extends StatefulWidget {
     super.key,
     required this.onRecorded,
     required this.onUnavailable,
+    required this.onClose,
   });
 
   final ValueChanged<File> onRecorded;
   final VoidCallback onUnavailable;
+  final VoidCallback onClose;
 
   @override
   State<CameraRecorder> createState() => _CameraRecorderState();
@@ -28,8 +31,11 @@ class _CameraRecorderState extends State<CameraRecorder> {
   CameraController? _controller;
   bool _initializing = true;
   bool _recording = false;
+  bool _torchOn = false;
   int _remaining = kCameraRecorderSeconds;
   Timer? _timer;
+  List<CameraDescription> _cameras = const [];
+  int _cameraIndex = 0;
 
   bool get _isAr => Localizations.localeOf(context).languageCode == 'ar';
 
@@ -42,21 +48,71 @@ class _CameraRecorderState extends State<CameraRecorder> {
   Future<void> _init() async {
     try {
       final cameras = await availableCameras();
-      final controller = CameraController(cameras.first, ResolutionPreset.high, enableAudio: true);
-      await controller.initialize();
-      if (!mounted) {
-        await controller.dispose();
+      if (cameras.isEmpty) {
+        if (mounted) {
+          setState(() => _initializing = false);
+          widget.onUnavailable();
+        }
         return;
       }
-      setState(() {
-        _controller = controller;
-        _initializing = false;
-      });
+      _cameras = cameras;
+      await _activateCamera(cameras.first);
     } catch (_) {
       if (mounted) {
         setState(() => _initializing = false);
         widget.onUnavailable();
       }
+    }
+  }
+
+  Future<void> _activateCamera(CameraDescription description) async {
+    final previous = _controller;
+    final controller = CameraController(description, ResolutionPreset.high, enableAudio: true);
+    try {
+      await controller.initialize();
+    } catch (_) {
+      await controller.dispose();
+      widget.onUnavailable();
+      return;
+    }
+    if (!mounted) {
+      await controller.dispose();
+      return;
+    }
+    setState(() {
+      _controller = controller;
+      _initializing = false;
+      _torchOn = false;
+    });
+    if (previous != null && previous != controller) {
+      // Old controller outlived its use.
+      try {
+        await previous.dispose();
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _flipCamera() async {
+    final controller = _controller;
+    if (controller == null || _cameras.length < 2) return;
+    final next = (_cameraIndex + 1) % _cameras.length;
+    setState(() {
+      _cameraIndex = next;
+      _initializing = true;
+    });
+    await _activateCamera(_cameras[next]);
+  }
+
+  Future<void> _toggleFlash() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final mode = _torchOn ? FlashMode.off : FlashMode.torch;
+    try {
+      await controller.setFlashMode(mode);
+      if (!mounted) return;
+      setState(() => _torchOn = mode == FlashMode.torch);
+    } catch (_) {
+      // Flash unsupported on this camera — stay silent.
     }
   }
 
@@ -103,6 +159,14 @@ class _CameraRecorderState extends State<CameraRecorder> {
     }
   }
 
+  Future<void> _close() async {
+    _timer?.cancel();
+    try {
+      await _controller?.stopVideoRecording();
+    } catch (_) {}
+    widget.onClose();
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -131,20 +195,41 @@ class _CameraRecorderState extends State<CameraRecorder> {
           fit: StackFit.expand,
           children: [
             CameraPreview(controller),
-            Positioned(
+            _glassChip(
               top: 12,
               right: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(16)),
-                child: Text(
-                  _recording
-                      ? '$_remaining'
-                      : (_isAr ? '60 ثانية' : '60s'),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
-                ),
+              child: Text(
+                _recording
+                    ? '$_remaining'
+                    : (_isAr ? '60 ثانية' : '60s'),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
               ),
             ),
+            _glassButton(
+              top: 12,
+              left: 12,
+              tooltip: _isAr ? AppStrings.closeCameraAr : AppStrings.closeCamera,
+              icon: Icons.close_rounded,
+              onPressed: _close,
+            ),
+            if (_cameras.length > 1)
+              _glassButton(
+                top: 64,
+                left: 12,
+                tooltip: _isAr ? AppStrings.flipCameraAr : AppStrings.flipCamera,
+                icon: Icons.cameraswitch_rounded,
+                onPressed: _flipCamera,
+                spinOnTap: true,
+              ),
+            if (controller.value.isInitialized)
+              _glassButton(
+                top: 116,
+                left: 12,
+                tooltip: _isAr ? AppStrings.flashToggleAr : AppStrings.flashToggle,
+                icon: _torchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                onPressed: _toggleFlash,
+                selected: _torchOn,
+              ),
             Center(
               child: GestureDetector(
                 onTap: _toggleRecording,
@@ -165,6 +250,52 @@ class _CameraRecorderState extends State<CameraRecorder> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _glassChip({required double top, required double right, required Widget child}) {
+    return Positioned(
+      top: top,
+      right: right,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(16)),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _glassButton({
+    required double top,
+    required double left,
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onPressed,
+    bool selected = false,
+    bool spinOnTap = false,
+  }) {
+    return Positioned(
+      top: top,
+      left: left,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: selected ? AppColors.accent : Colors.black54,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: AnimatedRotation(
+              turns: spinOnTap && _cameraIndex > 0 ? (_cameraIndex % 2) * 1.0 : 0,
+              duration: const Duration(milliseconds: 250),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Icon(icon, color: Colors.white, size: 24),
+              ),
+            ),
+          ),
         ),
       ),
     );

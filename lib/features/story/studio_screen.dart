@@ -14,15 +14,18 @@ import '../../core/widgets/brand_widgets.dart';
 import 'camera_recorder.dart';
 import 'my_stories_screen.dart';
 import 'story_preview.dart';
+import 'video_effects.dart';
 
 /// The 60-second story studio: record with the camera or pick from the gallery,
 /// add a caption, then publish (upload progress included).
+/// Effects (filters + backgrounds) are baked into the final clip before publish.
 class StoryStudioScreen extends StatefulWidget {
   const StoryStudioScreen({
     super.key,
     this.picker,
     this.cameraEnabled = true,
     this.allowVideoPreview = true,
+    this.videoEffectsService,
   });
 
   static const String route = '/studio';
@@ -30,6 +33,7 @@ class StoryStudioScreen extends StatefulWidget {
   final MediaPicker? picker;
   final bool cameraEnabled;
   final bool allowVideoPreview;
+  final VideoEffectsService? videoEffectsService;
 
   @override
   State<StoryStudioScreen> createState() => _StoryStudioScreenState();
@@ -38,16 +42,21 @@ class StoryStudioScreen extends StatefulWidget {
 class _StoryStudioScreenState extends State<StoryStudioScreen> {
   bool _cameraBroken = false;
   bool _cameraRequested = false;
+  File? _base;
   File? _video;
   File? _thumbnail;
   double _progress = 0;
   bool _publishing = false;
+  bool _processingFx = false;
+  double _fxProgress = 0;
+  ColorFilterPreset _filter = kNoFilter;
+  BackgroundPreset _background = kNoBackground;
   Object? _publishError;
 
   final _caption = TextEditingController();
 
   bool get _hasVideo => _video != null;
-  bool get _canPublish => _hasVideo && !_publishing;
+  bool get _canPublish => _hasVideo && !_publishing && !_processingFx;
   bool get _isAr => Localizations.localeOf(context).languageCode == 'ar';
 
   /// Picker from the widget, then the widget tree (test DI), then production.
@@ -60,6 +69,16 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     }
   }
 
+  /// Effect engine from the widget, then the widget tree, then production.
+  VideoEffectsService get _effectsService {
+    if (widget.videoEffectsService != null) return widget.videoEffectsService!;
+    try {
+      return context.read<VideoEffectsService>();
+    } catch (_) {
+      return FfmpegVideoEffectsService();
+    }
+  }
+
   @override
   void dispose() {
     _caption.dispose();
@@ -69,9 +88,14 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   void _onVideoPicked(File? file) {
     if (file == null) return;
     setState(() {
+      _base = file;
       _video = file;
       _cameraBroken = false;
       _publishError = null;
+      _processingFx = false;
+      _fxProgress = 0;
+      _filter = kNoFilter;
+      _background = kNoBackground;
     });
   }
 
@@ -103,10 +127,71 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
     if (error is StoryTooLongException) {
       return _isAr ? AppStrings.storyTooLongAr : AppStrings.storyTooLong;
     }
+    if (error is VideoEffectsException) {
+      return _isAr ? AppStrings.effectFailedAr : AppStrings.effectFailed;
+    }
     return AuthErrors.friendlyMessage(error, isAr: _isAr);
   }
 
   String? _ownerUid() => context.read<AuthProvider>().snapshot.profile?.uid;
+
+  void _selectFilter(ColorFilterPreset preset) {
+    if (_base == null || preset.id == _filter.id) return;
+    setState(() => _filter = preset);
+    _applyEffects();
+  }
+
+  void _selectBackground(BackgroundPreset preset) {
+    if (_base == null || preset.id == _background.id) return;
+    setState(() => _background = preset);
+    _applyEffects();
+  }
+
+  /// Re-encodes [_base] with the current filter/background so the preview
+  /// and the published clip both reflect the effect.
+  Future<void> _applyEffects() async {
+    final base = _base;
+    if (base == null) return;
+    if (_filter.isNone && _background.isNone) {
+      setState(() {
+        _video = base;
+        _processingFx = false;
+        _fxProgress = 0;
+      });
+      return;
+    }
+    setState(() {
+      _processingFx = true;
+      _fxProgress = 0;
+      _publishError = null;
+    });
+    try {
+      final output = await _effectsService.process(
+        input: base,
+        filter: _filter,
+        background: _background,
+        onProgress: (p) {
+          if (mounted && _processingFx) setState(() => _fxProgress = p);
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _video = output;
+        _processingFx = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _processingFx = false;
+        _fxProgress = 0;
+        _video = base;
+        _filter = kNoFilter;
+        _background = kNoBackground;
+        _publishError = e;
+      });
+      _showSnack(_isAr ? AppStrings.effectFailedAr : AppStrings.effectFailed);
+    }
+  }
 
   Future<void> _publish() async {
     if (!_canPublish) return;
@@ -133,7 +218,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
             },
           );
       if (!mounted) return;
-      _showSnack(_isAr ? 'تم نشر قصتك بنجاح' : 'Your story was published');
+      _showSnack(_isAr ? AppStrings.publishedSuccessAr : AppStrings.publishedSuccess);
       context.go(MyStoriesScreen.route);
     } catch (e) {
       if (!mounted) return;
@@ -211,8 +296,41 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
           aspectRatio: 9 / 16,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: RepaintBoundary(child: StoryVideoPreview(video: _video, allowPreview: widget.allowVideoPreview)),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                RepaintBoundary(child: StoryVideoPreview(video: _video, allowPreview: widget.allowVideoPreview)),
+                if (_processingFx)
+                  ColoredBox(
+                    color: Colors.black54,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                            value: _fxProgress == 0 ? null : _fxProgress,
+                            color: AppColors.accent,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _isAr ? AppStrings.applyingEffectAr : AppStrings.applyingEffect,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
+        ),
+        const SizedBox(height: 16),
+        _EffectsBar(
+          filter: _filter,
+          background: _background,
+          onFilter: _selectFilter,
+          onBackground: _selectBackground,
+          isAr: _isAr,
         ),
         const SizedBox(height: 12),
         Row(
@@ -221,10 +339,17 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               child: _OutlineAction(
                 icon: Icons.replay_rounded,
                 label: _isAr ? 'إعادة التصوير' : 'Retake',
-                onTap: () => setState(() {
-                  _video = null;
-                  _thumbnail = null;
-                }),
+                onTap: _processingFx
+                    ? null
+                    : () => setState(() {
+                          _base = null;
+                          _video = null;
+                          _thumbnail = null;
+                          _filter = kNoFilter;
+                          _background = kNoBackground;
+                          _processingFx = false;
+                          _fxProgress = 0;
+                        }),
               ),
             ),
             const SizedBox(width: 12),
@@ -232,7 +357,7 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
               child: _OutlineAction(
                 icon: Icons.photo_library_rounded,
                 label: _isAr ? 'الصورة الغلاف' : 'Cover',
-                onTap: _pickThumbnail,
+                onTap: _processingFx ? null : _pickThumbnail,
               ),
             ),
           ],
@@ -271,12 +396,13 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
           CameraRecorder(
             onRecorded: _onVideoPicked,
             onUnavailable: () => setState(() => _cameraBroken = true),
+            onClose: () => setState(() => _cameraRequested = false),
           ),
           const SizedBox(height: 16),
         ],
         GradientButton(
           label: _isAr ? AppStrings.pickFromGalleryAr : AppStrings.pickFromGallery,
-          onPressed: _publishing ? null : _pickFromGallery,
+          onPressed: _publishing || _processingFx ? null : _pickFromGallery,
         ),
         if (_cameraBroken) ...[
           const SizedBox(height: 12),
@@ -291,12 +417,165 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   }
 }
 
+/// Filters + backgrounds chooser. Gets its own file later if it grows.
+class _EffectsBar extends StatelessWidget {
+  const _EffectsBar({
+    required this.filter,
+    required this.background,
+    required this.onFilter,
+    required this.onBackground,
+    required this.isAr,
+  });
+
+  final ColorFilterPreset filter;
+  final BackgroundPreset background;
+  final ValueChanged<ColorFilterPreset> onFilter;
+  final ValueChanged<BackgroundPreset> onBackground;
+  final bool isAr;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isAr ? AppStrings.filtersSectionAr : AppStrings.filtersSection,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 92,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: kColorFilters.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final preset = kColorFilters[i];
+              return _FxOption(
+                label: isAr ? preset.nameAr : preset.nameEn,
+                selected: preset.id == filter.id,
+                swatch: GradientBoxSwatch(a: preset.swatchA, b: preset.swatchB),
+                onTap: () => onFilter(preset),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          isAr ? AppStrings.backgroundSectionAr : AppStrings.backgroundSection,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 92,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: kBackgrounds.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final preset = kBackgrounds[i];
+              return _FxOption(
+                label: isAr ? preset.nameAr : preset.nameEn,
+                selected: preset.id == background.id,
+                swatch: SolidColorSwatch(color: Color(preset.color ?? 0x000000)),
+                onTap: () => onBackground(preset),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          isAr ? AppStrings.chromaHintAr : AppStrings.chromaHint,
+          style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+class _FxOption extends StatelessWidget {
+  const _FxOption({
+    required this.label,
+    required this.swatch,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Widget swatch;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? AppColors.accent : Colors.transparent,
+            width: 3,
+          ),
+        ),
+        child: Column(
+          children: [
+            SizedBox(
+              width: 56,
+              height: 54,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: swatch,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class GradientBoxSwatch extends StatelessWidget {
+  const GradientBoxSwatch({super.key, required this.a, required this.b});
+
+  final Color a;
+  final Color b;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [a, b],
+        ),
+      ),
+    );
+  }
+}
+
+class SolidColorSwatch extends StatelessWidget {
+  const SolidColorSwatch({super.key, required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(decoration: BoxDecoration(color: color));
+  }
+}
+
 class _OutlineAction extends StatelessWidget {
   const _OutlineAction({required this.icon, required this.label, required this.onTap});
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

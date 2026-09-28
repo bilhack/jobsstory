@@ -79,6 +79,24 @@ class AppStrings {
   static const String storyTooLongAr = 'القصة يجب ألا تتجاوز 60 ثانية.';
   static const String publishedSuccess = 'Your story was published';
   static const String publishedSuccessAr = 'تم نشر قصتك بنجاح';
+  static const String filtersSection = 'Filters';
+  static const String filtersSectionAr = 'الفلاتر';
+  static const String backgroundSection = 'Background';
+  static const String backgroundSectionAr = 'الخلفية';
+  static const String chromaHint =
+      'Record against a solid, one-colour backdrop (a green screen) to replace it.';
+  static const String chromaHintAr =
+      'سجّل أمام خلفية موحدة بلون واحد (خضراء مثلاً) وسيتم استبدالها بالخلفية المختارة.';
+  static const String applyingEffect = 'Applying effect…';
+  static const String applyingEffectAr = 'جاري تطبيق التأثير…';
+  static const String effectFailed = 'Could not apply the effect. Please retry.';
+  static const String effectFailedAr = 'تعذّر تطبيق التأثير. حاول مرة أخرى.';
+  static const String flipCamera = 'Flip camera';
+  static const String flipCameraAr = 'قلب الكاميرا';
+  static const String flashToggle = 'Toggle flash';
+  static const String flashToggleAr = 'تشغيل/إيقاف الفلاش';
+  static const String closeCamera = 'Close camera';
+  static const String closeCameraAr = 'إغلاق الكاميرا';
 
   // My stories
   static const String myStories = 'My stories';

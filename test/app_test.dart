@@ -6,6 +6,7 @@ import 'package:jobsstory/core/models/app_user.dart';
 import 'package:jobsstory/core/models/job.dart';
 import 'package:jobsstory/core/models/job_application.dart';
 import 'package:jobsstory/core/models/story.dart';
+import 'package:jobsstory/features/story/video_effects.dart';
 import 'package:jobsstory/main.dart';
 import 'package:provider/provider.dart';
 
@@ -164,6 +165,51 @@ void main() {
     expect(find.text('قصتي', skipOffstage: false), findsNothing);
     expect(find.text('قصتي الأولى'), findsOneWidget);
     expect(find.text('قيد المراجعة'), findsOneWidget);
+  });
+
+  testWidgets('Studio: applying a filter bakes it into the published clip', (tester) async {
+    final storyService = FakeStoryService();
+    final fxService = FakeVideoEffectsService();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<MediaPicker>.value(value: FakeMediaPicker()),
+          Provider<VideoEffectsService>.value(value: fxService),
+        ],
+        child: JobsStoryApp(
+          authService: FakeAuthService(FakeStatus.signedInSeeker),
+          storyService: storyService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await go(tester, '/studio');
+    await tester.tap(find.text('اختر من المعرض'));
+    await tester.pumpAndSettle();
+
+    // Effects bar appears for the fresh clip.
+    expect(find.text('الفلاتر'), findsOneWidget);
+    expect(find.text('الخلفية'), findsOneWidget);
+
+    // Pick the "كودا" (warm) filter → the fake engine is asked to process.
+    await tester.ensureVisible(find.text('كودا'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('كودا'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(fxService.lastFilter?.id, 'warm');
+
+    // The preview now shows the processed file, and publish uploads THAT file.
+    await tester.ensureVisible(find.text('نشر القصة'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('نشر القصة'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(storyService.publishCount, 1);
+    expect(storyService.lastPublishedVideo?.path, fxService.processed.path);
   });
 
   testWidgets('My stories shows seeded list and delete empties it', (tester) async {

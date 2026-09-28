@@ -15,6 +15,7 @@ import 'package:jobsstory/core/services/notification_service.dart';
 import 'package:jobsstory/core/services/story_interaction_service.dart';
 import 'package:jobsstory/core/services/story_service.dart';
 import 'package:jobsstory/core/services/user_repository.dart';
+import 'package:jobsstory/features/story/video_effects.dart';
 
 enum FakeStatus {
   unsigned,
@@ -118,6 +119,7 @@ class FakeStoryService implements StoryService {
   int publishCount = 0;
   StoryStatus publishStatus = StoryStatus.review;
   Object? errorToThrow;
+  File? lastPublishedVideo;
 
   @override
   Future<Story> publishStory({
@@ -128,6 +130,7 @@ class FakeStoryService implements StoryService {
     void Function(double progress)? onProgress,
   }) async {
     if (errorToThrow != null) throw errorToThrow!;
+    lastPublishedVideo = video;
     publishCount++;
     onProgress?.call(0.5);
     onProgress?.call(1.0);
@@ -369,4 +372,27 @@ class FakeMediaPicker implements MediaPicker {
 
   @override
   Future<File?> pickImage() async => null;
+}
+
+/// Applies presets instantly so studio effect flows run without FFmpegKit.
+class FakeVideoEffectsService implements VideoEffectsService {
+  final File processed = File('${Directory.systemTemp.path}/processed_fx.mp4');
+  ColorFilterPreset? lastFilter;
+  BackgroundPreset? lastBackground;
+  Object? errorToThrow;
+
+  @override
+  Future<File> process({
+    required File input,
+    ColorFilterPreset? filter,
+    BackgroundPreset? background,
+    ValueChanged<double>? onProgress,
+  }) async {
+    if (errorToThrow != null) throw errorToThrow!;
+    lastFilter = filter;
+    lastBackground = background;
+    onProgress?.call(0.5);
+    onProgress?.call(1.0);
+    return processed;
+  }
 }

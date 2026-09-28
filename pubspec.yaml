@@ -51,6 +51,7 @@ dependencies:
   share_plus: ^12.0.2
   firebase_messaging: ^16.7.0
   url_launcher: ^6.3.2
+  ffmpeg_kit_flutter_new: 4.6.0
 
 dev_dependencies:
   flutter_test:
