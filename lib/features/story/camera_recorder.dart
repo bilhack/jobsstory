@@ -170,7 +170,20 @@ class _CameraRecorderState extends State<CameraRecorder> {
   @override
   void dispose() {
     _timer?.cancel();
-    _controller?.dispose();
+    final controller = _controller;
+    if (controller == null) {
+      super.dispose();
+      return;
+    }
+    if (controller.value.isRecordingVideo) {
+      // Stop cleanly so the partial clip is never persisted as a story.
+      controller.stopVideoRecording().then(
+            (_) => controller.dispose(),
+            onError: (_) => controller.dispose(),
+          );
+    } else {
+      controller.dispose();
+    }
     super.dispose();
   }
 

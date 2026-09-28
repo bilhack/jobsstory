@@ -212,6 +212,35 @@ void main() {
     expect(storyService.lastPublishedVideo?.path, fxService.processed.path);
   });
 
+  testWidgets('Studio back steps out of the recorder to the source, then home', (tester) async {
+    final storyService = FakeStoryService();
+    await tester.pumpWidget(
+      Provider<MediaPicker>.value(
+        value: FakeMediaPicker(),
+        child: JobsStoryApp(
+          authService: FakeAuthService(FakeStatus.signedInSeeker),
+          storyService: storyService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await go(tester, '/studio');
+
+    // Picked clip → back discards it and returns to the source section.
+    await tester.tap(find.text('اختر من المعرض'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('الفلاتر'), findsNothing);
+    expect(find.text('اختر من المعرض'), findsOneWidget);
+
+    // No clip and no camera open → back leaves the studio.
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('إنشاء قصة'), findsOneWidget);
+  });
+
   testWidgets('My stories shows seeded list and delete empties it', (tester) async {
     final storyService = FakeStoryService();
     storyService.seed([

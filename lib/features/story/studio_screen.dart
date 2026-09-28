@@ -11,6 +11,7 @@ import '../../core/providers/story_provider.dart';
 import '../../core/services/story_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/brand_widgets.dart';
+import '../home/home_screen.dart';
 import 'camera_recorder.dart';
 import 'my_stories_screen.dart';
 import 'story_preview.dart';
@@ -83,6 +84,28 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   void dispose() {
     _caption.dispose();
     super.dispose();
+  }
+
+  /// Step back: close the camera → discard the current clip → leave the studio.
+  void _goBack() {
+    if (_hasVideo) {
+      setState(() {
+        _base = null;
+        _video = null;
+        _thumbnail = null;
+        _filter = kNoFilter;
+        _background = kNoBackground;
+        _processingFx = false;
+        _fxProgress = 0;
+        _publishError = null;
+      });
+      return;
+    }
+    if (_cameraRequested && !_cameraBroken) {
+      setState(() => _cameraRequested = false);
+      return;
+    }
+    context.go(HomeScreen.route);
   }
 
   void _onVideoPicked(File? file) {
@@ -231,7 +254,11 @@ class _StoryStudioScreenState extends State<StoryStudioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, title: const Text(AppStrings.appName)),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        leading: BackButton(onPressed: _goBack),
+        title: const Text(AppStrings.appName),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
