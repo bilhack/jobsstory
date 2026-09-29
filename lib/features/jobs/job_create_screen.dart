@@ -65,6 +65,7 @@ class _JobCreateScreenState extends State<JobCreateScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        leading: const BackButton(),
         title: Text(_isAr ? AppStrings.postJobAr : AppStrings.postJob),
       ),
       body: SafeArea(

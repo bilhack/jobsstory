@@ -495,6 +495,16 @@ void main() {
 
     expect(find.text('نبحث عن مهندس واجهات متحمس.'), findsOneWidget);
     expect(find.text('قدّم بقصتك'), findsOneWidget);
+
+    // Back button on the detail screen returns to the browse list.
+    await tester.tap(find.byType(BackButton).first);
+    await tester.pumpAndSettle();
+    expect(find.text('مطور فلاتر'), findsOneWidget);
+
+    // Back button on browse returns home.
+    await tester.tap(find.byType(BackButton).first);
+    await tester.pumpAndSettle();
+    expect(find.text('إنشاء قصة'), findsOneWidget);
   });
 
   testWidgets('Seeker applies with their approved story and tracks it', (tester) async {

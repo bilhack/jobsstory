@@ -55,6 +55,7 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        leading: const BackButton(),
         title: Text(_isAr ? AppStrings.myApplicationsAr : AppStrings.myApplications),
       ),
       body: SafeArea(

@@ -116,6 +116,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        leading: const BackButton(),
         title: Text(_job?.title ?? (_isAr ? AppStrings.jobsAr : AppStrings.jobs)),
       ),
       body: SafeArea(

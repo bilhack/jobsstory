@@ -7,6 +7,7 @@ import '../../core/models/job.dart';
 import '../../core/providers/jobs_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/format.dart';
+import '../home/home_screen.dart';
 import 'job_detail_screen.dart';
 
 /// Seeker-only browse screen for open job postings.
@@ -38,6 +39,7 @@ class _JobsBrowseScreenState extends State<JobsBrowseScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        leading: BackButton(onPressed: () => context.go(HomeScreen.route)),
         title: Text(_isAr ? AppStrings.jobsAr : AppStrings.jobs),
       ),
       body: SafeArea(

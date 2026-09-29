@@ -141,6 +141,7 @@ class _JobApplicantsScreenState extends State<JobApplicantsScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        leading: const BackButton(),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
