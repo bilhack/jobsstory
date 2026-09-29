@@ -1,7 +1,7 @@
 /**
- * JobsStory push notifications (Phase 4).
- * - New application  -> notify the job owner (recruiter).
- * - Status change    -> notify the applying seeker.
+ * JobsStory backend (Cloud Functions).
+ * - Push notifications (Phase 4) live below.
+ * - The admin control-plane ("لوحة التحكم") is exported from ./admin.
  *
  * Deploy (requires Spark->Blaze upgrade + Storage setup in the console):
  *   cd functions && npm install && npm run deploy
@@ -11,7 +11,11 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 
+// initializeApp MUST run before the admin control-plane module is loaded
+// (admin.js binds Firestore/Storage at require time).
 initializeApp();
+
+const admin = require("./admin");
 
 async function notify(uid, title, body) {
   if (!uid) return;

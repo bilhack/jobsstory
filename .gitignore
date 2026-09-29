@@ -46,3 +46,10 @@ app.*.map.json
 
 # Firebase CLI debug logs
 firebase-debug.log
+
+# Node / admin web panel
+functions/node_modules/
+admin/node_modules/
+admin/dist/
+admin/.env
+*.tsbuildinfo
