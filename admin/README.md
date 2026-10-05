@@ -30,19 +30,17 @@ Cloud Functions الآمنة في `../functions/admin.js`.
    cd ../functions && npm install && npm run deploy
    ```
 
-5. **تشغيل الواجهة محلياً**:
+5. **تشغيل الواجهة محلياً** (بورت ثابت 5180):
    ```
    cd ../admin
    npm install
-   npm run dev        # http://localhost:5173
+   npm run dev        # http://localhost:5180
    ```
 
-6. **نشر الواجهة** (اختياري — Firebase Hosting):
-   ```
-   cd ../admin
-   npm run deploy
-   ```
-   ثم افتح `https://jobsstory-app.web.app` (أو نطاقك).
+## النشر
+اللوحة **محلية فقط** عن قصد (رأس `firebase.json` لا يحتوي `hosting`،
+أي أن `firebase deploy` لن يلمس أي موقع منشور لمشروع `jobsstory-app`).
+إن أردت نشرها مستقبلاً، استعمل مشروع Firebase منفصلاً حتى لا يستبدل موقعك الحالي.
 
 ## الأقسام
 - **نظرة عامة** — إحصاءات المنصة وأحدث التسجيلات.
@@ -54,5 +52,5 @@ Cloud Functions الآمنة في `../functions/admin.js`.
 
 ## ملاحظات
 - إرسال الإشعارات والـ Cloud Functions يتطلبان باقة **Blaze** (دفع حسب الاستخدام).
-- `firebase.json` يشير للوحة على المسار `admin/dist` ضمن `hosting`،
-  وتُفحص الدوال عبر `functions/index.js` (يربط `./admin`).
+- الدوال مُربوطة عبر `functions/index.js` (يربط `./admin`) وتُفحص بـ
+  `firebase deploy --only functions` فقط.
