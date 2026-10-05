@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, type User } from "firebase/auth";
-import { app, firebaseConfig } from "./firebase";
+import { app, appReady, missingKeys } from "./firebase";
 import { call, errorMessage } from "./api";
 import Overview from "./pages/Overview";
 import Users from "./pages/Users";
@@ -9,8 +9,6 @@ import Jobs from "./pages/Jobs";
 import Applications from "./pages/Applications";
 import Broadcast from "./pages/Broadcast";
 import { Spinner, ErrorBox } from "./components/ui";
-
-const auth = getAuth(app);
 
 type TabId = "overview" | "users" | "stories" | "jobs" | "applications" | "broadcast";
 
@@ -26,11 +24,48 @@ const NAV: { id: TabId; label: string; icon: JSX.Element }[] = [
 export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
 
-  useEffect(() => onAuthStateChanged(auth, setUser), []);
+  useEffect(() => {
+    if (!appReady || !app) return;
+    return onAuthStateChanged(getAuth(app), setUser);
+  }, []);
 
+  if (!appReady) return <SetupGuide />;
   if (user === undefined) return <Spinner label="جارِ التحقق من الجلسة..." />;
   if (!user) return <Login />;
   return <Main />;
+}
+
+function SetupGuide() {
+  return (
+    <div className="login-wrap">
+      <div className="card login-card">
+        <div className="brand" style={{ padding: "0 0 14px" }}>
+          <div className="brand-logo">J</div>
+          <div>
+            <div className="brand-name">JobsStory</div>
+            <div className="brand-sub">لوحة تحكم المشرف</div>
+          </div>
+        </div>
+        <ErrorBox message="الإعداد ناقص — ملف admin/.env غير موجود أو يفتقد قيمة." />
+        <p style={{ fontSize: 13.5 }}>
+          القيم الناقصة: <b>{missingKeys.join("، ") || "VITE_FIREBASE_API_KEY"}</b>
+        </p>
+        <ol className="muted" style={{ paddingInlineStart: 18, fontSize: 12.5, lineHeight: 1.9 }}>
+          <li>
+            انسخ الملف: <code>cp .env.example .env</code> (داخل مجلد <code>admin</code>)
+          </li>
+          <li>
+            الصق مفتاح <code>VITE_FIREBASE_API_KEY</code> من
+            Firebase Console ← Project settings ← General ← Web API Key
+          </li>
+          <li>أعد تشغيل الخادم: <code>npm run dev</code></li>
+        </ol>
+        <p className="muted" style={{ fontSize: 12 }}>
+          المفتاح موجود أيضاً في الملف <code>lib/firebase_options.dart</code> داخل المشروع.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function Login() {
@@ -38,6 +73,9 @@ function Login() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const auth = app ? getAuth(app) : null;
+
+  if (!auth) return <SetupGuide />;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,10 +138,13 @@ function Login() {
 function Main() {
   const [tab, setTab] = useState<TabId>("overview");
   const [denied, setDenied] = useState("");
+  const auth = app ? getAuth(app) : null;
 
   useEffect(() => {
     call("adminPing").catch((e) => setDenied(errorMessage(e)));
   }, []);
+
+  if (!auth) return <SetupGuide />;
 
   if (denied) {
     return (

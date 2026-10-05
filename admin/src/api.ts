@@ -1,11 +1,17 @@
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFunctions, httpsCallable, type Functions } from "firebase/functions";
 import { app } from "./firebase";
 
-const functions = getFunctions(app, "us-central1");
+let cached: Functions | null = null;
+
+function functionsClient(): Functions {
+  if (!app) throw new Error("Firebase is not configured — see src/firebase.ts");
+  if (!cached) cached = getFunctions(app, "us-central1");
+  return cached;
+}
 
 /** Calls one of the admin Cloud Functions (`functions/admin.js`). */
 export async function call<T>(name: string, data: Record<string, unknown> = {}): Promise<T> {
-  const fn = httpsCallable<Record<string, unknown>, T>(functions, name);
+  const fn = httpsCallable<Record<string, unknown>, T>(functionsClient(), name);
   const result = await fn(data);
   return result.data;
 }
