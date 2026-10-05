@@ -20,8 +20,8 @@ const db = getFirestore();
 
 const PAGE_SIZE = 50;
 
-async function requireAdmin(context) {
-  const uid = context?.auth?.uid;
+async function requireAdmin(auth) {
+  const uid = auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "يجب تسجيل الدخول إلى لوحة التحكم.");
   const doc = await db.collection("users").doc(uid).get();
   if (!doc.exists || doc.data().isAdmin !== true) {
@@ -345,15 +345,22 @@ exports.adminBroadcast = onAdminCall(async ({ title, body }) => {
   });
 
   let sent = 0;
-  for (let i = 0; i < tokens.length; i += 500) {
-    const chunk = tokens.slice(i, i + 500);
-    const res = await getMessaging().sendEachForMulticast({
-      tokens: chunk,
-      notification: { title: t, body: b },
-    });
-    sent += res.successCount;
+  let warning = "";
+  try {
+    const messaging = getMessaging();
+    for (let i = 0; i < tokens.length; i += 500) {
+      const chunk = tokens.slice(i, i + 500);
+      const res = await messaging.sendEachForMulticast({
+        tokens: chunk,
+        notification: { title: t, body: b },
+      });
+      sent += res.successCount;
+    }
+  } catch (err) {
+    // The emulator has no FCM backend — report instead of failing the call.
+    warning = String(err && err.message ? err.message : err);
   }
-  return { ok: true, targeted: tokens.length, sent };
+  return { ok: true, targeted: tokens.length, sent, warning };
 });
 
 // Connectivity / auth sanity check used by the panel once.

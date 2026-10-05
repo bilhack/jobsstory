@@ -21,6 +21,16 @@ export const missingKeys = Object.entries(firebaseConfig)
 
 export const appReady = Boolean(firebaseConfig.apiKey);
 
+// When true the panel talks to the local Firebase Emulator Suite instead of
+// the live project (free, no Blaze plan needed). See admin/README.md.
+export const useEmulators = env.VITE_USE_EMULATORS === "true";
+
+export const emulatorPorts = {
+  auth: 9099,
+  functions: 5001,
+  firestore: 8080,
+};
+
 export const app: FirebaseApp | null = appReady ? initializeApp(firebaseConfig) : null;
 
 if (!appReady) {

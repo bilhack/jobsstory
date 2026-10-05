@@ -17,6 +17,11 @@ initializeApp();
 
 const admin = require("./admin");
 
+// The Functions runtime only discovers callable exports on the main module,
+// so the admin control-plane must be re-exported explicitly — requiring it
+// alone would register nothing (every call would fail with not-found).
+Object.assign(module.exports, admin);
+
 async function notify(uid, title, body) {
   if (!uid) return;
   const user = await getFirestore().collection("users").doc(uid).get();

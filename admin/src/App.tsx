@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, type User } from "firebase/auth";
-import { app, appReady, missingKeys } from "./firebase";
+import { getAuth, connectAuthEmulator, onAuthStateChanged, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut, type User } from "firebase/auth";
+import { app, appReady, missingKeys, useEmulators, emulatorPorts } from "./firebase";
 import { call, errorMessage } from "./api";
 import Overview from "./pages/Overview";
 import Users from "./pages/Users";
@@ -11,6 +11,15 @@ import Broadcast from "./pages/Broadcast";
 import { Spinner, ErrorBox } from "./components/ui";
 
 type TabId = "overview" | "users" | "stories" | "jobs" | "applications" | "broadcast";
+
+/** Single Auth instance, optionally pointed at the local emulator. */
+function firebaseAuth() {
+  const auth = getAuth(app as NonNullable<typeof app>);
+  if (useEmulators && !auth.emulatorConfig) {
+    connectAuthEmulator(auth, `http://127.0.0.1:${emulatorPorts.auth}`, { disableWarnings: true });
+  }
+  return auth;
+}
 
 const NAV: { id: TabId; label: string; icon: JSX.Element }[] = [
   { id: "overview", label: "نظرة عامة", icon: <IconDashboard /> },
@@ -26,7 +35,7 @@ export default function App() {
 
   useEffect(() => {
     if (!appReady || !app) return;
-    return onAuthStateChanged(getAuth(app), setUser);
+    return onAuthStateChanged(firebaseAuth(), setUser);
   }, []);
 
   if (!appReady) return <SetupGuide />;
@@ -73,7 +82,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const auth = app ? getAuth(app) : null;
+  const auth = app ? firebaseAuth() : null;
 
   if (!auth) return <SetupGuide />;
 
@@ -138,7 +147,7 @@ function Login() {
 function Main() {
   const [tab, setTab] = useState<TabId>("overview");
   const [denied, setDenied] = useState("");
-  const auth = app ? getAuth(app) : null;
+  const auth = app ? firebaseAuth() : null;
 
   useEffect(() => {
     call("adminPing").catch((e) => setDenied(errorMessage(e)));

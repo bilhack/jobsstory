@@ -1,11 +1,16 @@
-import { getFunctions, httpsCallable, type Functions } from "firebase/functions";
-import { app } from "./firebase";
+import { getFunctions, httpsCallable, connectFunctionsEmulator, type Functions } from "firebase/functions";
+import { app, useEmulators, emulatorPorts } from "./firebase";
 
 let cached: Functions | null = null;
 
 function functionsClient(): Functions {
   if (!app) throw new Error("Firebase is not configured — see src/firebase.ts");
-  if (!cached) cached = getFunctions(app, "us-central1");
+  if (!cached) {
+    cached = getFunctions(app, "us-central1");
+    if (useEmulators) {
+      connectFunctionsEmulator(cached, "127.0.0.1", emulatorPorts.functions);
+    }
+  }
   return cached;
 }
 

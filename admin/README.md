@@ -9,28 +9,58 @@ Cloud Functions الآمنة في `../functions/admin.js`.
 1. تسجيل الدخول (`requireAuth`).
 2. وثيقة المستخدم تحمل `isAdmin: true`.
 
-## خطوات التشغيل (مرة واحدة)
+## quickest path — local emulator (free, no Blaze)
 
-1. **إنشاء تطبيق ويب في Firebase** (إن لم يكن موجوداً):
+Cloud Functions can only be deployed on the **Blaze** plan, so the panel ships
+with an emulator mode that runs the whole backend on your machine:
+
+```
+# 1) start the emulators (Auth 9099, Functions 5001, Firestore 8080, UI 4000)
+firebase emulators:start --only auth,firestore,functions --project jobsstory-app
+
+# 2) in another terminal — fill the emulator with demo data
+cd functions && node seed-emulator.js
+
+# 3) verify the whole API end to end (optional but recommended)
+cd ../admin && node scripts/smoke.mjs
+
+# 4) run the panel
+cd admin && npm run dev        # http://localhost:5180
+```
+
+Sign in with:
+
+```
+admin@jobsstory.app / Admin12345!
+```
+
+Emulator data lives in memory: **stopping `emulators:start` wipes it** — just
+re-run `node seed-emulator.js`. Set `VITE_USE_EMULATORS=false` in `.env` to point
+the panel back at the live project (needs a deployed Blaze backend).
+
+## steps for the live project (one-time)
+
+1. **Create a web app in Firebase** (if none exists):
    Firebase Console ← Project settings ← Your apps ← Add app ← Web.
-   ستحصل على `apiKey` و `appId`.
+   You will get a web `apiKey` and `appId`.
 
-2. **إعداد المتغيرات**:
+2. **Set the variables**:
    ```
    cp .env.example .env
-   # املأ VITE_FIREBASE_API_KEY و VITE_FIREBASE_APP_ID (والبقية لها قيم افتراضية)
+   # fill VITE_FIREBASE_API_KEY (and VITE_FIREBASE_APP_ID)
+   # set VITE_USE_EMULATORS=false
    ```
 
-3. **منح صلاحية المشرف لأول حساب**:
-   Firebase Console ← Firestore ← users/{uid} ← أضف حقل `isAdmin: true`.
-   (هذا الحساب ببريده وكلمة مروره سيدخل اللوحة.)
+3. **Grant the first admin**:
+   Firebase Console ← Firestore ← users/{uid} ← add field `isAdmin: true`.
+   (That account signs in with its email and password.)
 
-4. **تثبيت الدوال ونشرها** (مرة واحدة، يتطلب ترقية Blaze):
+4. **Install and deploy the functions** (once, requires Blaze):
    ```
    cd ../functions && npm install && npm run deploy
    ```
 
-5. **تشغيل الواجهة محلياً** (بورت ثابت 5180):
+5. **Run the panel locally** (fixed port 5180):
    ```
    cd ../admin
    npm install
@@ -51,6 +81,6 @@ Cloud Functions الآمنة في `../functions/admin.js`.
 - **إشعار البث** — رسالة فورية لكل الأجهزة المسجلة (FCM).
 
 ## ملاحظات
-- إرسال الإشعارات والـ Cloud Functions يتطلبان باقة **Blaze** (دفع حسب الاستخدام).
-- الدوال مُربوطة عبر `functions/index.js` (يربط `./admin`) وتُفحص بـ
-  `firebase deploy --only functions` فقط.
+- إرسال الإشعارات والـ Cloud Functions الحقيقي يتطلبان باقة **Blaze** (دفع حسب الاستخدام)؛ وضع المحاكي يعمل بلا ذلك.
+- الدوال مُربوطة عبر `functions/index.js` الذي **يعيد تصدير** `./admin` (`Object.assign(module.exports, admin)`) — بدون ذلك لا يسجّل Functions-runtime أي نقطة نهاية.
+- فحص سريع للـ API دون متصفح: `node scripts/smoke.mjs` من مجلد `admin`.
